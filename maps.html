@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Circles</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    
+<script src="bower_components/jquery/dist/jquery.min.js"></script>      
+    <script>
+      var map;
+	  function latlong(userid)
+	  { 
+		     $.ajax({
+			 url:"api/outlets-web.php?show",
+			 type:"POST",
+			 data:{"userid":userid},
+			 contentType:"application/json; charset=utf-8",
+			 success: function(data){
+			 data=JSON.parse(data);
+			 var myLatLng = {lat:data.latitude, lng:data.longitude};    
+		     map = new google.maps.Map(document.getElementById('map'),        {
+          zoom: 14,
+          center: myLatLng,
+		  mapTypeId:google.maps.MapTypeId.ROADMAP
+        });
+	 
+			 }}); 
+	  }
+	  
+	  function initMap() {
+        //var myLatLng = {lat:28.96368627576849, lng: 77.73731481415368};
+		
+		$.ajax({
+			 url:"api/login.php?get&userid=88",
+			 type:"GET",
+			 contentType:"application/json; charset=utf-8",
+			 success: function(data){
+			 //alert(data);
+			 data=JSON.parse(data);
+			 var lat=parseFloat(data[0].latitude);
+			 var lng=parseFloat(data[0].longitude);
+			 var myLatLng = {lat:lat, lng:lng};    
+		     map = new google.maps.Map(document.getElementById('map'),        {
+          zoom: 14,
+          center: myLatLng,
+		  mapTypeId:google.maps.MapTypeId.ROADMAP
+        });
+	 
+			 },error: function(error) {alert(error.Message);}
+  });
+
+       // map = new google.maps.Map(document.getElementById('map'),        {
+        //  zoom: 14,
+        //  center: myLatLng,
+		//  mapTypeId:google.maps.MapTypeId.ROADMAP
+        //});
+
+        
+	  
+      }
+	  
+	  function ff()
+	  {
+
+             $.ajax({
+			 url:"api/login.php?get&userid=88",
+			 type:"POST",
+			 data:{"userid":"88"},
+			 contentType:"application/json; charset=utf-8",
+			 success: function(data){
+			     //alert(data);
+			 data=JSON.parse(data);
+			 var lat=parseFloat(data[0].latitude);
+			 var lng=parseFloat(data[0].longitude);
+			 var myLatLng = {lat:lat, lng:lng};    
+		  var marker = new google.maps.Marker({
+          position: myLatLng,
+          map: map,
+          title: 'Hello World!',
+		  icon:'map-marker-red.png'
+        });
+			 }});
+		  
+		  
+		  
+	  }
+	  setInterval(ff,500);
+	  
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCrxsk0fDpJlEqqLXqrdrg833McDrv5apc&callback=initMap">
+    </script>
+  </body>
+</html>

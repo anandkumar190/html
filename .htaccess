@@ -1,0 +1,29 @@
+RewriteEngine On
+
+# -----------------------------------------
+# 0) API: do NOT apply any redirects/rewrites
+# -----------------------------------------
+RewriteRule ^api/ - [L]
+
+# -----------------------------------------
+# 1) Remove .php from public URLs (redirect)
+# Example: /about.php -> /about
+# -----------------------------------------
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+RewriteRule ^ %1 [R=301,L]
+
+# -----------------------------------------
+# 2) Map /about -> /about.php (internal)
+# Only for single-level routes (no slashes)
+# -----------------------------------------
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^([^/]+)/?$ $1.php [L]
+
+# -----------------------------------------
+# 3) Fallback router
+# If not an existing file/dir, go to index.php
+# -----------------------------------------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
