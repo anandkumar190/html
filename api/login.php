@@ -129,7 +129,7 @@ if (isset($_GET['new_login'])) {
 
     // ✅ Step 1: Check employee login
     $stmt = $con->prepare("
-        SELECT id, empid, email, name
+        SELECT *
         FROM employees
         WHERE email = ? AND password = ? AND status='1'
         LIMIT 1
@@ -159,11 +159,11 @@ if (isset($_GET['new_login'])) {
 
         if ($row2 = $res2->fetch_assoc()) {
             
-$name = trim($_POST['name']);
-$modelno = trim($_POST['modelno']);
+		$name = trim($_POST['name']);
+		$modelno = trim($_POST['modelno']);
 
-$db_name = trim($row2['name']);
-$db_modelno = trim($row2['modelno']);
+		$db_name = trim($row2['name']);
+		$db_modelno = trim($row2['modelno']);
 
 		if ($db_name == $name && $db_modelno == $modelno) {
                 $check = "same";
