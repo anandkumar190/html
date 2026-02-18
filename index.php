@@ -15,7 +15,7 @@ error_reporting(E_ALL);
    else
    {
 	   header("loaction:home");
-	  //  echo"<script>window.location='home';</script>";
+	   echo"<script>window.location='home';</script>";
 	   exit();
    }
 ?>
