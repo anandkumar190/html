@@ -6,6 +6,11 @@
   $date=date("Y-m-d");
   
   
+      // ✅ Hash password same as your working login
+    function mysql_native_password_hash($plain) {
+        return '*' . strtoupper(sha1(sha1($plain, true)));
+    }
+ 
   function truncate_number( $number, $precision = 2) {
     // Zero causes issues, and no need to truncate
     if ( 0 == (int)$number ) {
@@ -81,7 +86,10 @@
 	}
 	
 	$filename=$empname.$empcode.".jpg";
-	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,city,state,reportsto,latitude,longitude,battery,region,doj,creationdate,createdby,stockistid,areaid,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','0','0','0','$usertype',password('$emppass'),'0','0','$city','$state','0','$lat','$lng','$pannumber','$gstnumber','$datetime','$datetime','$userid','$stockistid','$areaid','$datetime')") or die(mysqli_error($con));
+	
+	 $emppass = mysql_native_password_hash($emppass);
+
+	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,city,state,reportsto,latitude,longitude,battery,region,doj,creationdate,createdby,stockistid,areaid,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','0','0','0','$usertype','$emppass','0','0','$city','$state','0','$lat','$lng','$pannumber','$gstnumber','$datetime','$datetime','$userid','$stockistid','$areaid','$datetime')") or die(mysqli_error($con));
 	
 	mysqli_query($con,"insert into outletactivity(userid,outletid,activitytype,battery,activitydate,activitytime,feedback) values('$userid','0','Stockist Create','$battery','$date','$time','New Stockist Create id is $empcode')");
 	

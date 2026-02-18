@@ -5,7 +5,10 @@
   $datetime = date("Y-m-d H:i:s");
   $date=date("Y-m-d"); 
   
-  
+      function mysql_native_password_hash($plain) {
+        return '*' . strtoupper(sha1(sha1($plain, true)));
+    }
+
   function truncate_number( $number, $precision = 2) {
     // Zero causes issues, and no need to truncate
     if ( 0 == (int)$number ) {
@@ -156,7 +159,8 @@
 	}
 	
 	$filename=$empname.$empcode.".jpg";
-	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,city,state,reportsto,latitude,longitude,battery,region,doj,creationdate,createdby,stockistid,areaid,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','0','0','0','$usertype',password('$emppass'),'0','0','$city','$state','0','$lat','$lng','$pannumber','$gstnumber','$date','$datetime','$userid','$stockistid','$areaid','$datetime')") or die(mysqli_error($con));
+	 $emppass = mysql_native_password_hash($emppass);
+	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,city,state,reportsto,latitude,longitude,battery,region,doj,creationdate,createdby,stockistid,areaid,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','0','0','0','$usertype','$emppass','0','0','$city','$state','0','$lat','$lng','$pannumber','$gstnumber','$date','$datetime','$userid','$stockistid','$areaid','$datetime')") or die(mysqli_error($con));
 	
 	$createid=mysqli_insert_id($con);
 	$query="";
@@ -223,7 +227,8 @@
 	}
 	
 	$filename=$empname.$empcode.".jpg";
-	mysqli_query($con,"update  employees set  image='$filename',name='$empname',email='$empemail',contact='$empcontact',address='$empaddress',usertype='$usertype',password=password('$emppass'),city='$city',state='$state',latitude='$lat',longitude='$lng',battery='$pannumber',region='$gstnumber',stockistid='$stockistid',areaid='$areaid',lastlogin='$datetime' where id='$id' and usertype='$usertype'") or die(mysqli_error($con));
+	 $emppass = mysql_native_password_hash($emppass);
+	mysqli_query($con,"update  employees set  image='$filename',name='$empname',email='$empemail',contact='$empcontact',address='$empaddress',usertype='$usertype',password='$emppass',city='$city',state='$state',latitude='$lat',longitude='$lng',battery='$pannumber',region='$gstnumber',stockistid='$stockistid',areaid='$areaid',lastlogin='$datetime' where id='$id' and usertype='$usertype'") or die(mysqli_error($con));
 	
 	$query="";
 	if($usertype=="2")
@@ -331,8 +336,8 @@
 	   }
 	
 	
-	
-	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,city,state,reportsto,latitude,longitude,battery,region,doj,creationdate,createdby,stockistid,areaid,lastlogin) values('','$empname','$empcode','$empemail','$empcontact','$empaddress','0','0','0','$usertype',password('$emppass'),'0','0','$city','$state','0','$lat','$lng','$pannumber','$gstnumber','$date','$datetime','$userid','$stockistid','$areaid','$datetime')") or die(mysqli_error($con));
+	 $emppass = mysql_native_password_hash($emppass);
+	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,city,state,reportsto,latitude,longitude,battery,region,doj,creationdate,createdby,stockistid,areaid,lastlogin) values('','$empname','$empcode','$empemail','$empcontact','$empaddress','0','0','0','$usertype','$emppass','0','0','$city','$state','0','$lat','$lng','$pannumber','$gstnumber','$date','$datetime','$userid','$stockistid','$areaid','$datetime')") or die(mysqli_error($con));
 	
 	$createid=mysqli_insert_id($con);
 	$query="";

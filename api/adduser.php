@@ -18,6 +18,11 @@ if(!isset($_SESSION['tittu']))
   $time=date("H:i:s"); 
   $datetime = date("Y-m-d H:i:s");
   $date=date("Y-m-d");
+
+    function mysql_native_password_hash($plain) {
+        return '*' . strtoupper(sha1(sha1($plain, true)));
+    }
+
   
   if(isset($_GET['insert']))
   {
@@ -61,7 +66,8 @@ if(!isset($_SESSION['tittu']))
 	}
 	
 	$filename=$empname.$empcode.".jpg";
-	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,doj,reportsto,creationdate,createdby,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','$empdesignation','$emprole','$empmanager','1',password('$emppass'),'$empsalary','$empcomm','$empdoj','$empreportto','$userid','$datetime','$datetime')") or die(mysqli_error($con));
+	 $emppass = mysql_native_password_hash($emppass);
+	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,designationid,roleid,managerid,usertype,password,salary,commission,doj,reportsto,creationdate,createdby,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','$empdesignation','$emprole','$empmanager','1','$emppass','$empsalary','$empcomm','$empdoj','$empreportto','$userid','$datetime','$datetime')") or die(mysqli_error($con));
 	
 	if(mysqli_affected_rows($con)>0)
 	{
@@ -161,7 +167,8 @@ if(!isset($_SESSION['tittu']))
 			  unlink("../imgusers".$filename);
 		  }
 		  
-	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',image='$filename',lastlogin='$datetime',password=password('$emppass') where id='$id'") or die(mysqli_error($con));
+		   $emppass = mysql_native_password_hash($emppass);
+	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',image='$filename',lastlogin='$datetime',password='$emppass' where id='$id'") or die(mysqli_error($con));
 	      if(mysqli_affected_rows($con)>0)
        	  {
 	       if(move_uploaded_file($tmpname,"../imgusers/".$filename))
@@ -188,7 +195,8 @@ if(!isset($_SESSION['tittu']))
 	   else
 	   {
 	      //$filename=$pname.$pshort.".jpg";
-	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',lastlogin='$datetime',password=password('$emppass') where id='$id'") or die(mysqli_error($con));
+		   $emppass = mysql_native_password_hash($emppass);
+	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',lastlogin='$datetime',password='$emppass' where id='$id'") or die(mysqli_error($con));
 	      if(mysqli_affected_rows($con)>0)
        	  {
 	          echo"success";  
