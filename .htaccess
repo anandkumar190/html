@@ -1,29 +1,35 @@
 RewriteEngine On
 
-# -----------------------------------------
-# 0) API: do NOT apply any redirects/rewrites
-# -----------------------------------------
+# -------------------------------------------------
+# 0) Fix accidental filesystem-path URLs
+# Example: /var/www/html/login  -> /login
+# -------------------------------------------------
+RewriteRule ^var/www/html/?(.*)$ /$1 [R=302,L]
+
+# -------------------------------------------------
+# 1) API: do NOT rewrite/redirect
+# -------------------------------------------------
 RewriteRule ^api/ - [L]
 
-# -----------------------------------------
-# 1) Remove .php from public URLs (redirect)
-# Example: /about.php -> /about
-# -----------------------------------------
+# -------------------------------------------------
+# 2) Canonical: redirect *.php -> no extension
+# Example: /login.php -> /login
+# -------------------------------------------------
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
 RewriteRule ^ %1 [R=301,L]
 
-# -----------------------------------------
-# 2) Map /about -> /about.php (internal)
-# Only for single-level routes (no slashes)
-# -----------------------------------------
+# -------------------------------------------------
+# 3) Route pretty URL to matching .php if it exists
+# Works for nested paths too: /a/b -> /a/b.php (if exists)
+# -------------------------------------------------
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^([^/]+)/?$ $1.php [L]
+RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+RewriteRule ^(.+?)/?$ $1.php [L]
 
-# -----------------------------------------
-# 3) Fallback router
-# If not an existing file/dir, go to index.php
-# -----------------------------------------
+# -------------------------------------------------
+# 4) Front controller fallback (optional)
+# If not file/dir, send to index.php
+# -------------------------------------------------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [L]
