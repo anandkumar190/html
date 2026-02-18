@@ -9,8 +9,9 @@
    }
    else
    {
-	   header("loaction:home");
-	   echo"<script>window.location='home';</script>";
+	  // header("loaction:home");
+     header("Location: /html/home/");
+	  //  echo"<script>window.location='home';</script>";
 	   exit();
    }
 ?>
