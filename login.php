@@ -12,16 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lgnbtn'])) {
     $user = $_POST['user'] ?? '';
     $pass = $_POST['pass'] ?? '';
 
-
     $obj = new Login($con, $user, $pass);
 
     if ($obj->login()) {
-        header("Location: index");
-		echo"<script> window.location='index'; </script>";
+        // login() MUST set $_SESSION['tittu']
+        header("Location: /index.php");
         exit;
     } else {
-        header("Location: login?err");
-	  echo"<script> window.location='login?err'; </script>";
+        header("Location: /login.php?err=1");
         exit;
     }
 }
@@ -101,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lgnbtn'])) {
     <!-- /.lockscreen-image -->
 
     <!-- lockscreen credentials (contains the form) -->
-    <form class="lockscreen-credentials" id="loginform" action="login" method="post" style="margin-left:-2px;">
+    <form class="lockscreen-credentials" id="loginform" action="login.php" method="post" style="margin-left:-2px;">
         <!-- User name -->
         <div class="lockscreen-name">User Email</div>
 
