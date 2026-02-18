@@ -6,16 +6,15 @@
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-   if(!isset($_SESSION['tittu']))
-   {
-	   header("loaction:login");
-	   echo"<script>window.location='login';</script>";
-	   exit();
-   }
-   else
-   {
-	   header("loaction:home");
-	   echo"<script>window.location='home';</script>";
-	   exit();
-   }
+
+session_start();
+
+if (!isset($_SESSION['tittu'])) {
+    header("Location: /login.php");
+    exit;
+}
+
+header("Location: /home.php");
+exit;
+
 ?>
