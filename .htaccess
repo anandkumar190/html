@@ -1,37 +1,28 @@
 RewriteEngine On
 
-# -------------------------------------------------
 # 0) Fix accidental filesystem-path URLs
-# Example: /var/www/html/login -> /login
-# -------------------------------------------------
 RewriteRule ^var/www/html/?(.*)$ /$1 [R=302,L]
 
-# -------------------------------------------------
-# 1) API: do NOT rewrite/redirect
-# -------------------------------------------------
-RewriteRule ^api/ - [L]
+# 1) API pretty routing: /api/foo -> /api/foo.php (if exists)
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/api/$1.php -f
+RewriteRule ^api/(.+?)/?$ api/$1.php [L]
 
-# -------------------------------------------------
-# 2) Canonical: redirect *.php -> no extension (GET only)
-# Example: /login.php -> /login
-# IMPORTANT: do NOT redirect POST requests (fixes login POST 301 issue)
-# -------------------------------------------------
+# 2) (Optional) Prevent *.php -> no-extension redirects for API
+# (keep API URLs stable; don't redirect API)
+RewriteCond %{REQUEST_URI} !^/api/ [NC]
+
+# 3) Canonical: redirect *.php -> no extension (GET only)
 RewriteCond %{REQUEST_METHOD} !POST
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
 RewriteRule ^ %1 [R=301,L]
 
-# -------------------------------------------------
-# 3) Route pretty URL to matching .php if it exists
-# Examples: /login -> login.php, /home -> home.php
-# -------------------------------------------------
+# 4) Route pretty URL to matching .php if it exists
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{DOCUMENT_ROOT}/$1.php -f
 RewriteRule ^(.+?)/?$ $1.php [L]
 
-# -------------------------------------------------
-# 4) Front controller fallback (optional)
-# If not file/dir, send to index.php
-# -------------------------------------------------
+# 5) Fallback
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [L]
