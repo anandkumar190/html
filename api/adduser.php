@@ -67,7 +67,7 @@ if(!isset($_SESSION['tittu']))
 	
 	$filename=$empname.$empcode.".jpg";
 	 $emppass = mysql_native_password_hash($emppass);
-	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,usertype,password,creationdate,createdby,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','1','$emppass','$userid','$datetime','$datetime')") or die(mysqli_error($con));
+	mysqli_query($con,"insert into employees(image,name,empid,email,contact,address,usertype,password,creationdate,createdby,lastlogin) values('$filename','$empname','$empcode','$empemail','$empcontact','$empaddress','1','$emppass','$datetime','$datetime','$datetime')") or die(mysqli_error($con));
 	
 	if(mysqli_affected_rows($con)>0)
 	{
