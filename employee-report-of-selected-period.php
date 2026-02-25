@@ -139,15 +139,18 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			}
 
 			// Fetch area details
-			$areaQuery = "
-				SELECT o.areaid, area.area as areaName 
-				FROM outletactivity a 
-				JOIN outlets o ON a.outletid = o.id 
-				JOIN area ON o.areaid = area.id 
-				WHERE a.userid='$employee' AND a.activitydate='$selectdate' AND a.visittype='0' 
-				GROUP BY o.areaid, area.area 
-				ORDER BY a.id ASC
-			";
+				$areaQuery = "
+				SELECT DISTINCT
+					o.areaid,
+					area.area AS areaName
+				FROM outletactivity a
+				JOIN outlets o ON a.outletid = o.id
+				JOIN area ON o.areaid = area.id
+				WHERE a.userid='$employee'
+					AND a.activitydate='$selectdate'
+					AND a.visittype='0'
+				ORDER BY areaName ASC
+				";
 			$areaRes = mysqli_query($con, $areaQuery);
 			$areas = [];
 
