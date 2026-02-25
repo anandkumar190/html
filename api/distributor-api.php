@@ -245,12 +245,12 @@ $time=date("H:i:s");
 	   }
 	   else
 	   {
-		 $empcontact = mysql_native_password_hash($empcontact);
+		 $password = mysql_native_password_hash($empcontact);
 
 	      	mysqli_query($con,"update  employees set name='$empname',
 			email='$empemail',
 			contact='$empcontact',
-			password='$empcontact',
+			password='$password',
 			address='$empaddress',
 			city='$empcity',
 			state='$empstate',
