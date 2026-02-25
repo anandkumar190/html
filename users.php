@@ -448,13 +448,13 @@ function sendData(){
 		fd.append('empemail',empemail);
 		fd.append('empcontact',empcontact);
 		fd.append('empaddress',empaddress);
-		fd.append('empdesignation',empdesignation);
-		fd.append('emprole',emprole);
-		fd.append('empmanager',empmanager);
-		fd.append('empreportto',empreportto);
-		fd.append('empdoj',empdoj);
-		fd.append('empsalary',empsalary);
-		fd.append('empcomm',empcomm);
+		//fd.append('empdesignation',empdesignation);
+		//fd.append('emprole',emprole);
+		//fd.append('empmanager',empmanager);
+		//fd.append('empreportto',empreportto);
+		//fd.append('empdoj',empdoj);
+//		fd.append('empsalary',empsalary);
+	//	fd.append('empcomm',empcomm);
 		fd.append('emppass',emppass);
         progress.fadeIn("slow");
         $.ajax({
