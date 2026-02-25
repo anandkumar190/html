@@ -630,7 +630,9 @@ if(isset($_GET['search']))
 		";
 		$res30days = mysqli_query($con, $query30);
 		$outletSum30Row = mysqli_fetch_assoc($res30days);
-		$outletSum30 = round(@$outletSum30Row['total_amount'],2) ?? 0;
+	//	$outletSum30 = round(@$outletSum30Row['total_amount'],2) ?? 0;
+		$val = $outletSum30Row['total_amount'] ?? 0;
+		$outletSum30 = round((float)$val, 2);
 		
 		// 180 days sum
 		$query180 = "
@@ -642,7 +644,10 @@ if(isset($_GET['search']))
 		";
 		$res180days = mysqli_query($con, $query180);
 		$outletSum180Row = mysqli_fetch_assoc($res180days);
-		$outletSum180 = @$outletSum180Row['total_amount']>0? round($outletSum180Row['total_amount']/6,2):0;
+
+		$valoutletSum180Row=@$outletSum180Row['total_amount']??0;
+
+		$outletSum180 = $valoutletSum180Row>0? round($valoutletSum180Row/6,2):0;
 	
 
 
