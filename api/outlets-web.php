@@ -706,7 +706,7 @@ if(isset($_GET['search']))
    
    if(isset($_GET['activityvisit']))
    {
-	   $res=mysqli_query($con,"SELECT 
+	$res = mysqli_query($con, "SELECT 
 				o.id,
 				o.name,
 				o.address,
@@ -734,18 +734,24 @@ if(isset($_GET['search']))
 				END AS is_updated_today,
 				emp.name AS distributorname,
 				SUM(IFNULL(b.total_amount, 0)) AS total_booking_amount
-				 FROM outletactivity a 
-				 JOIN outlets o ON a.outletid = o.id 
-				 JOIN employees e ON e.id = a.userid 
-				 JOIN area ON area.id = o.routeid 
-				 JOIN employees emp ON emp.id = area.distributor_id
-				 JOIN regions ON regions.id = area.region 
-				 JOIN cities ON cities.id = regions.city_id 
-				 JOIN states ON states.id = cities.state_id 
-			LEFT JOIN booking b ON b.outlet_id = o.id AND DATE(b.booking_time) = a.activitydate
-			 WHERE a.activitydate >= CURDATE() - INTERVAL 7 DAY
-			GROUP BY o.id, a.activitydate, a.activitytime
-			ORDER BY a.id DESC");   
+				FROM outletactivity a
+				JOIN (
+				SELECT MAX(id) AS id
+				FROM outletactivity
+				WHERE activitydate >= CURDATE() - INTERVAL 7 DAY
+				GROUP BY outletid, activitydate, activitytime
+				) latest ON latest.id = a.id
+				JOIN outlets o ON a.outletid = o.id
+				JOIN employees e ON e.id = a.userid
+				JOIN area ON area.id = o.routeid
+				JOIN employees emp ON emp.id = area.distributor_id
+				JOIN regions ON regions.id = area.region
+				JOIN cities ON cities.id = regions.city_id
+				JOIN states ON states.id = cities.state_id
+				LEFT JOIN booking b 
+				ON b.outlet_id = o.id AND DATE(b.booking_time) = a.activitydate
+				GROUP BY o.id, a.activitydate, a.activitytime, a.id
+				ORDER BY a.id DESC");  
 	   $response=array();
 	   $num=mysqli_field_count($con);
 	   while($row=mysqli_fetch_array($res))
