@@ -196,7 +196,8 @@ if(!isset($_SESSION['tittu']))
 	   {
 	      //$filename=$pname.$pshort.".jpg";
 		   $emppass = mysql_native_password_hash($emppass);
-	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',lastlogin='$datetime',password='$emppass' where id='$id'") or die(mysqli_error($con));
+	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',lastlogin='$datetime',password='$emppass' where id='$id'") or die(mysqli_error($con));
+		  //designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',
 	      if(mysqli_affected_rows($con)>0)
        	  {
 	          echo"success";  

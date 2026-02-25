@@ -205,7 +205,7 @@ function sendData(){
      //       fd.append(key, value);
       //  });
 		
-        var files = $('#empimage')[0].files[0];
+    var files = $('#empimage')[0].files[0];
 		var id = $('#id').val();
 		var empname = $('#empname').val();
 		var empcode = $('#empcode').val();
@@ -221,7 +221,8 @@ function sendData(){
 		var empcomm = $('#empcomm').val();
 		var empdol = $('#empdol').val();
     var emppass = $('#emppass').val();
-        fd.append('empimage',files);
+
+    fd.append('empimage',files);
 		fd.append('id',id);
 		fd.append('empname',empname);
 		fd.append('empcode',empcode);
