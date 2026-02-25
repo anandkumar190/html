@@ -1,6 +1,6 @@
 <?php
-  
   include("../connect.php");
+
   $time=date("H:i:s"); 
   $datetime = date("Y-m-d H:i:s");
   $date=date("Y-m-d");
