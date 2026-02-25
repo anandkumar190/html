@@ -1,5 +1,10 @@
 <?php
-  include("../connect.php");
+
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+
+include("../connect.php");
 
   $time=date("H:i:s"); 
   $datetime = date("Y-m-d H:i:s");
