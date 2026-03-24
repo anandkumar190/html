@@ -173,22 +173,20 @@
                   <label for="gstnumber">GST Number : </label>
                   <input type="text" class="form-control" name="gstnumber" id="gstnumber" value="<?php echo $gstnumber;?>" pattern="\d{2}[A-Z]{5}\d{4}[A-Z]{1}\d{1}[A-Z]{1}\d{1}" pattern-bv-message="Enter Correct  GST NO" placeholder="GST Number" />
                 </div>
-                <div class="form-group">
-                  <label for="outlettype">Outlet Type : </label>
+<div class="form-group">
+    <label for="outlettype">Outlet Type :</label>
 
+    <select class="form-control" name="outlettype" id="outlettype" required>
+        <option value="">Select Type</option>
 
-              
-                  <select  class="form-control" name="outlettype" id="outlettype" required>
-                       <option value=" ">Select Type</option>
-                   <?php 
-                   foreach ($outletType as $i => $type) {
-                          $isSeleted=$type==$outlettype?"selected":"";
-                    echo "  <option  ".$isSeleted." value=".$type." >".$type."</option>";
-                   }
-                   ?>
-                
-            
-                </div>
+        <?php 
+        foreach ($outletType as $type) {
+            $isSelected = ($type == $outlettype) ? "selected" : "";
+            echo '<option value="' . htmlspecialchars($type) . '" ' . $isSelected . '>' . htmlspecialchars($type) . '</option>';
+        }
+        ?>
+    </select>
+</div>
                 
                 <!-- <div class="form-group">
                   <label for="outletsubtype">OutletSub Type : </label>
