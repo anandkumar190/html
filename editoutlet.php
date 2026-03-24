@@ -187,10 +187,7 @@
                    }
                    ?>
                 
-              
-                   
-                  <input type="text" class="form-control" name="outlettype" id="outlettype" value="<?php echo $outlettype;?>" placeholder="OutletType" required />
-              
+            
                 </div>
                 
                 <!-- <div class="form-group">
