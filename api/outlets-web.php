@@ -602,6 +602,12 @@ if(isset($_GET['search']))
 				$selectQry=$selectQry.$prefix." o.routeid = '$routeid'";
 				$isSnd=1;
 			 }
+			 if ($outletType!="") {
+				$prefix=$isSnd==0?" where ":" and ";
+				$selectQry=$selectQry.$prefix." o.outlettype = '$outlettype'";
+				$isSnd=1;
+			 }
+			 
 		 }
 
 
@@ -669,6 +675,7 @@ if(isset($_GET['search']))
 		   $rr["contactperson"]=$row["contactperson"];
 		   $rr["contact"]=$row["contact"];
 		   $rr["address"]=$row['address'];
+		   $rr["outlettype"]=$row["outlettype"];
 
 	
 		   

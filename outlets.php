@@ -80,6 +80,18 @@
                     
                   </select>
                  </div>
+          
+                 <div class="input-group input-group-sm" style="width: 150px;">  
+                 <label>Select Type</label>
+                  <select class="form-control select2" id="outletType">
+                    <option value="">Select Type</option>           
+                    <option value="MTS">MTS</option>
+                    <option value="G.T.">G.T.</option>
+                    <option value="MTL">MTL</option>
+                    <option value="Milk Booth">Milk Booth</option>
+                    
+                  </select>
+                 </div>
 
                  <div class="input-group input-group-sm" style="width: 50px ">
           
@@ -203,6 +215,7 @@
 													<th>Route</th>
                           <th>Distributor</th>
 													<th>Outlet Name</th>										
+													<th>Outlet Type</th>										
 													<th>Last Visit</th>
                           <th>Last 30 days <br> Orders </th>
                           <th>Past Orders <br> (PerMonth)</th>
@@ -432,6 +445,9 @@
 		  contentType:"application/json; charset=utf-8",
 		  success:function(data){
 			   //alert(data);
+
+   
+
 			   data=JSON.parse(data);
 			   $mt.html("MTS - "+data[data.length-1].mt);
 			   $gt.html("G.T. - "+data[data.length-1].gt);
@@ -594,6 +610,7 @@ function loaddataduplicate()
 		var city=$("#city").val();
 		var region=$("#region").val();
 		var area=$("#area").val();
+		var outletType=$("#outletType").val();
 		// var so=$("#so").val();
 		var distributor=$("#distributor").val();
 		var routeid='';
@@ -604,7 +621,7 @@ function loaddataduplicate()
 		 progress.fadeIn("slow");
 		 
          $.ajax({
-		  url:"api/outlets-web.php?search&state="+state+"&city="+city+"&region="+region+"&area="+area+"&distributor="+distributor+"&routeid="+routeid,
+		  url:"api/outlets-web.php?search&state="+state+"&city="+city+"&region="+region+"&area="+area+"&distributor="+distributor+"&routeid="+routeid+"&outletType="+outletType,
 		  type:"POST",
 		  //&so="+so+
 		  contentType:"application/json; charset=utf-8",
@@ -665,6 +682,9 @@ function loaddataduplicate()
                       },
                       {
                         data:'routename'
+                      },
+                      {
+                        data:'outlettype'
                       },
                       {
                         data:'distributor'
