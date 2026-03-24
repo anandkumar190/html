@@ -98,6 +98,10 @@
 		
 	}
   }
+
+
+  $outletType=["MTS","G.T.","MTL","Milk Both"];
+
 ?>
 
 <!-- Content Wrapper. Contains page content -->
@@ -171,7 +175,19 @@
                 </div>
                 <div class="form-group">
                   <label for="outlettype">Outlet Type : </label>
-                  <input type="text" class="form-control" name="outlettype" id="outlettype" value="<?php echo $outlettype;?>" placeholder="OutletType" required />
+
+
+              
+                  <select  class="form-control" name="outlettype" id="outlettype" required>
+                       <option value=" ">Select Type</option>
+                   <?php 
+                   foreach ($outletType as $i => $type) {
+                          $isSeleted=$type==$outlettype?"selected":"";
+                    echo "  <option  ".$isSeleted." value=".$type." >".$type."</option>";
+                   }
+                   ?>
+                
+            
                 </div>
                 
                 <!-- <div class="form-group">
@@ -244,7 +260,7 @@
                   </select>
                   <script>
                     var areaid=document.getElementById("areaid");
-					areaid.value="<?php echo $areaid;?>";
+		              			areaid.value="<?php echo $areaid;?>";
 					
                   </script>
                 </div>
