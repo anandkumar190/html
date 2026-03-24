@@ -683,13 +683,14 @@ function loaddataduplicate()
                       {
                         data:'routename'
                       },
-                      {
-                        data:'outlettype'
-                      },
+                  
                       {
                         data:'distributor'
                       },
                       {data:'name'},
+                          {
+                        data:'outlettype'
+                      },
                       {data:'lastvisit'},
                       {data:'last_30_value'},
                       {data:'past_order_per_month'},

@@ -605,7 +605,7 @@ if(isset($_GET['search']))
 			 }
 			 if ($outletType!="") {
 				$prefix=$isSnd==0?" where ":" and ";
-				$selectQry=$selectQry.$prefix." o.outlettype LIKE  '$outlettype'";
+				$selectQry=$selectQry.$prefix." o.outlettype LIKE  '$outletType'";
 				$isSnd=1;
 			 }
 			 
