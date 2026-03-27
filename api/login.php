@@ -191,7 +191,7 @@ if (isset($_GET['new_login'])) {
             ");
  if (!$stmt3) { die(json_encode(["status"=>"error","message"=>$con->error])); }
            // $stmt3->bind_param("ssssiss", $name, $modelno, $appversion, $osversion, $datetime, $userid, $token);
-			$stmt3->bind_param("sssssiss", $name, $modelno, $appversion, $osversion, $datetime, $userid, $token);
+			$stmt3->bind_param("sssssis", $name, $modelno, $appversion, $osversion, $datetime, $userid, $token);
             $stmt3->execute();
         } else {
             $stmt3 = $con->prepare("
