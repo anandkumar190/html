@@ -364,8 +364,8 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			  }
 			  
 			  $avgTotalhours=($totalhours>0 and $workingday >0)?($totalhours/$workingday):0;
-			  $avgstarttime= (count($starttimearray)>0 and  $totalstime>0) ? ($totalstime/count($starttimearray)):0;
-			  $avgendtime= (count($endtimearray)>0 and  $totaletime>0) ? ($totaletime/count($endtimearray)):0;
+			  $avgstarttime= (count($starttimearray)>0 and  $totalstime>0) ? round($totalstime/count($starttimearray)):0;
+			  $avgendtime= (count($endtimearray)>0 and  $totaletime>0) ? round($totaletime/count($endtimearray)):0;
 			  
 
        $data="<table id='userstable' border='1' cellpadding='10' cellspacing='0' class='table'  data-processing='true' data-filtering='true' data-sorting='true'>
