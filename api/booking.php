@@ -341,6 +341,9 @@ if(isset($_GET['search'])){
                 $items['total_price'][$row3['product_id']]=$row3['total_price'];
             }
             if (!empty($row2) ) {
+                if (!empty($row2['booking_time'])) {
+                       $row2['booking_time']=date('Y-m-d H:i:s', strtotime($row2['booking_time'] . ' +5 hours 30 minutes'));
+                    }
                 $tt['booking_time'] = @$row2['booking_time'];
                 $tt['outlet_id']= @$outlets[$row2['outlet_id']];
 
