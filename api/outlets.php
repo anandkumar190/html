@@ -368,9 +368,9 @@ if(isset($_GET['feedback']))
 	   $res=mysqli_query($con,"select *, round( ( 6371  * acos( least(1.0,  cos( radians($lat) ) * cos( radians(latitude) ) * cos( radians(longitude) - radians($lng) ) + sin( radians($lat) ) * sin( radians(latitude) ) ) ) ), 3) as distance  from outlets  where routeid='$areaId' order by distance asc ");
 	   $response=array();
 
-  $distributorid = $distributorName = '';
+      $distributorid = $distributorName = '';
 
-// Escape $areaId to prevent issues if it's from user input
+     // Escape $areaId to prevent issues if it's from user input
 		
 
 		$distributorid = $distributorName = '';
@@ -464,6 +464,69 @@ if(isset($_GET['feedback']))
 	   return; 
    }
    
+
+      if(isset($_GET['show_limited']))
+   {
+	   extract($_REQUEST);
+	   $res=mysqli_query($con,"select *, round( ( 6371  * acos( least(1.0,  cos( radians($lat) ) * cos( radians(latitude) ) * cos( radians(longitude) - radians($lng) ) + sin( radians($lat) ) * sin( radians(latitude) ) ) ) ), 3) as distance  from outlets  where routeid='$areaId' order by distance asc LIMIT 25");
+	   $response=array();
+
+        $distributorid = $distributorName = '';
+
+		$res2 = mysqli_query($con, "
+			SELECT employees.name AS distributor_name, employees.id AS id 
+			FROM area 
+			JOIN employees ON area.distributor_id = employees.id  
+			WHERE area.id = '$areaId'
+		");
+
+		if ($res2 && mysqli_num_rows($res2) > 0) {
+			$resRoute = mysqli_fetch_assoc($res2);
+			if ($resRoute) {
+				$distributorName = $resRoute['distributor_name'];
+				$distributorid = $resRoute['id'];
+			}
+		}
+
+	   $num=mysqli_field_count($con);
+	   while($row=mysqli_fetch_array($res))
+	   {
+		   $rr=array();
+		   $rr["id"]=$row["id"];
+		   $rr["name"]=$row["name"];
+		   $rr["address"]=$row['address'];
+		   $rr["lastvisitpic"]=$row["lastvisitpic"];
+		   $rr["contactperson"]=$row["contactperson"];
+		   $rr["contact"]=$row["contact"];
+		   $rr["pincode"]=$row["pincode"];
+		   $rr["gstnumber"]=$row["gstnumber"];
+		   $rr["outlettype"]=$row["outlettype"];
+		   $rr["competitor_presense"]=$row["competitor_presense"];
+		   $rr["distributorid"]=$distributorid;
+		   $rr["salesmanagerid"]=$row["salesmanagerid"];
+		   $rr["rsmid"]=$row["rsmid"];
+		   $rr["routeid"]=$row["routeid"];
+		   $rr["street"]=$row["street"];
+		   $rr["locality"]=$row["locality"];
+		   $rr["city"]=$row["city"];
+		   $rr["state"]=$row["state"];
+		   $rr["latitude"]=$row["latitude"];
+		   $rr["longitude"]=$row["longitude"];
+		   $rr["areaid"]=$row["areaid"];
+		   $rr["lastvisit"]=$row["lastvisit"];
+		   $rr["creationdate"]=$row["creationdate"];
+		   $rr["createdby"]=$row["createdby"]; 
+		   $rr["distributor_name"]=$distributorName; 
+
+		   array_push($response,$rr);
+	   } 
+	
+	   
+	   $data=array();
+	   $data["data"]=$response;
+	   echo json_encode($data);
+	   return; 
+   }
    
       if(isset($_GET['activityvisit']))
    {
