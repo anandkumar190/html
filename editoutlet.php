@@ -311,7 +311,7 @@
                    <div class="progress-bar progress-bar-success" style="width: 100%">
                    </div>
                 </div>
-                <a href="activityvisit" class="btn btn-danger"><span class="fa fa-remove"></span> Cancel</a>
+            <a href="javascript:history.back()" class="btn btn-danger"><span class="fa fa-remove"></span> Cancel </a>
                 <button type="submit"  id="btnaddproduct" class="btn btn-primary pull-right "><span class="fa fa-edit"></span> Update Details</button>
               </div>
             
