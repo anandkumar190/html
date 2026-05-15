@@ -1,15 +1,11 @@
 <?php
  session_start();
-// if(!isset($_SESSION['tittu']))
-// {
-// 	echo"invalid";
-// 	exit();
-// }
+if(!isset($_SESSION['tittu']))
+{
+	echo"invalid";
+	exit();
+}
 
-session_start();
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 
   $userid=@$_SESSION['id']??1;
