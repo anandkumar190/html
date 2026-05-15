@@ -132,9 +132,13 @@ if(!isset($_SESSION['tittu']))
     }
 
 	
+	
+
+	    $redirect = $_SERVER['HTTP_REFERER'] ?? 'users.php';
+
+    header("Location: $redirect", true, 303);
 
 
-	header('Location: ' . $_SERVER['HTTP_REFERER'], true, 303);
 	exit;
 }
   else if(isset($_GET['edit']))
