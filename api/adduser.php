@@ -105,18 +105,33 @@ if(!isset($_SESSION['tittu']))
 
   else if (isset($_GET['delete_user']) && !empty($_GET['id'])) {
     $id = intval($_GET['id']); // Ensures ID is an integer
-    $stmt = $con->prepare("DELETE FROM `employees` WHERE id = ?");
-    $stmt->bind_param("i", $id);
+   
+	// $stmt = $con->prepare("DELETE FROM `employees` WHERE id = ?");
+    // $stmt->bind_param("i", $id);
     
-	    if ($stmt->execute()) {
-			echo "User deleted successfully";
+    $stmt = $con->prepare("DELETE FROM employees WHERE id = ?");
 
-		} else {
+    if (!$stmt) {
 
-			echo  $stmt->error;
-		}
+        $_SESSION['msg'] = "Prepare failed: " . $con->error;
 
-	 $stmt->close();
+    } else {
+
+        $stmt->bind_param("i", $id);
+
+        if ($stmt->execute()) {
+
+            $_SESSION['msg'] = "User deleted successfully";
+
+        } else {
+
+            $_SESSION['msg'] = "Delete failed: " . $stmt->error;
+        }
+
+        $stmt->close();
+    }
+
+	
 
 
 	header('Location: ' . $_SERVER['HTTP_REFERER'], true, 303);
