@@ -80,7 +80,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 	   
 			  $starttimearray=array();
 			  $endtimearray=array();
-			  $totalhours=0;
+			  $totalMinuts=0;
 			  $totaldistance=0;
 			  $totalold=0;
 			  $totalnew=0;
@@ -106,7 +106,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			$endtime = 0;
 			$totalWorkingdays=$workingdays=$workinghours = 0;
 			$workingTime = '0 Hrs 0 Mins';
-            $workingHoursDecimal  = 0.0;
+            $workingMinuts  = 0.0;
 
 			$visitDetails = [];
 			$outletActivities = [];
@@ -135,7 +135,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				$workingTime = sprintf('%d Hrs %d Mins', $hours, $minutes);
 
 				// Decimal for summing
-				$workingHoursDecimal = $hours + ($minutes / 60);
+				$workingMinuts = ($hours*60) + $minutes ;
 			}
 
 			// Fetch area details
@@ -261,7 +261,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			$rowData .= "<td>{$workingTime}</td>";
 
 			// Sum using the decimal value
-            $totalhours += $workingHoursDecimal;
+            $totalMinuts += $workingMinuts;
 			// Visit details table inside a cell
 
 				// 1. Area Name(s)
@@ -363,7 +363,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				  
 			  }
 			  
-			  $avgTotalhours=($totalhours>0 and $workingday >0)?($totalhours/$workingday):0;
+			  $avgTotalMinuts=($totalMinuts>0 and $workingday >0)?floor($totalMinuts/$workingday):0;
 			  $avgstarttime= (count($starttimearray)>0 and  $totalstime>0) ? round($totalstime/count($starttimearray)):0;
 			  $avgendtime= (count($endtimearray)>0 and  $totaletime>0) ? round($totaletime/count($endtimearray)):0;
 			  
@@ -399,13 +399,20 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 
 			  </tr>";
 
-$data.=$rowData;
-			  
+	$data.=$rowData;
+				
+	$avgHours = floor($avgTotalMinuts / 60);
+	$avgTotalProductivePercentage=floor($totalProductivePercentage/$workingday);
+	$avgMins = $avgTotalMinuts % 60;
+
+	
+
+
 	    $data.="<tr>
 		         <th>Averages</th> <th> </th> 
 				 <th>".date('H:i:s',$avgstarttime)."</th>
 				 <th>".date('H:i:s',$avgendtime)."</th>
-				 <th>".round(($avgTotalhours),2)." Hrs</th>
+				 <th>".$avgHours . " Hrs " . $avgMins . " Mins </th>
 				 <th>  </th> 
 				 <th>".$totalold."</th>
 				 <th>".$totalnew."</th>
@@ -413,7 +420,7 @@ $data.=$rowData;
 				 <th>".$totalothervisit."</th>
 				 <th>".$productivOutlets."</th>
 				 <th>".$totaloutletsNotVisited."</th>
-				 <th>".$totalProductivePercentage."%</th>
+				 <th>".$avgTotalProductivePercentage."%</th>
 				 <th>".$totalProductivValueOrders."</th>
 				 <th></th>
 		       </tr>";		  
