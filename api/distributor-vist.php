@@ -4,6 +4,9 @@
   $datetime = date("Y-m-d H:i:s");
   $date=date("Y-m-d"); 
 
+ error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 if(isset($_GET['distributor_visit']))
 {
     extract($_POST);
