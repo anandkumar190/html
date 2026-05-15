@@ -7,6 +7,10 @@
  error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+function truncate_number($number, $decimals = 3) {
+    return floor($number * pow(10, $decimals)) / pow(10, $decimals);
+}
+
 if(isset($_GET['distributor_visit']))
 {
     extract($_POST);
