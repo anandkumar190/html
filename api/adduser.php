@@ -108,31 +108,37 @@ if(!isset($_SESSION['tittu']))
    
 	// $stmt = $con->prepare("DELETE FROM `employees` WHERE id = ?");
     // $stmt->bind_param("i", $id);
-    
-    $stmt = $con->prepare("DELETE FROM employees WHERE id = ?");
+      $check = $con->prepare("SELECT COUNT(*) as total FROM devices WHERE user_id = ?");
+    $check->bind_param("i", $id);
+ $check->execute();
 
-    if (!$stmt) {
+    $result = $check->get_result()->fetch_assoc();
 
-        echo "Prepare failed: " . $con->error;
+    if ($result['total'] > 0) {
+
+        $_SESSION['msg'] = "Cannot delete employee. Divice records exist.";
 
     } else {
 
+        // DELETE USER
+        $stmt = $con->prepare("DELETE FROM employees WHERE id = ?");
         $stmt->bind_param("i", $id);
 
         if ($stmt->execute()) {
 
-            echo "User deleted successfully";
+            $_SESSION['msg'] = "Employee deleted successfully.";
 
         } else {
 
-           echo  "Delete failed: " . $stmt->error;
+            $_SESSION['msg'] = "Delete failed: " . $stmt->error;
         }
 
         $stmt->close();
     }
 
-	
-	
+    $check->close();
+
+
 
 	    $redirect = $_SERVER['HTTP_REFERER'] ?? 'users.php';
 
