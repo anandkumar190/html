@@ -402,7 +402,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 	$data.=$rowData;
 				
 	$avgHours = floor($avgTotalMinuts / 60);
-	$avgTotalProductivePercentage=floor($totalProductivePercentage/$workingday);
+	$avgTotalProductivePercentage= ($workingday>0 and $totalProductivePercentage>0)?floor($totalProductivePercentage/$workingday):0;
 	$avgMins = $avgTotalMinuts % 60;
 
 	
