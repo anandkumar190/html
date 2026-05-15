@@ -108,9 +108,16 @@ if(!isset($_SESSION['tittu']))
     $stmt = $con->prepare("DELETE FROM `employees` WHERE id = ?");
     $stmt->bind_param("i", $id);
     
-    if ($stmt->execute()) {
-        $stmt->close();
-    }
+	    if ($stmt->execute()) {
+			echo "User deleted successfully";
+
+		} else {
+
+			echo  $stmt->error;
+		}
+
+	 $stmt->close();
+
 
 	header('Location: ' . $_SERVER['HTTP_REFERER'], true, 303);
 	exit;
