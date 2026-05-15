@@ -112,7 +112,7 @@ ini_set('display_errors', 1);
    
 	// $stmt = $con->prepare("DELETE FROM `employees` WHERE id = ?");
     // $stmt->bind_param("i", $id);
-      $check = $con->prepare("SELECT COUNT(*) as total FROM devices WHERE user_id = ?");
+      $check = $con->prepare("SELECT COUNT(*) as total FROM devices WHERE userid = ?");
     $check->bind_param("i", $id);
  $check->execute();
 
@@ -131,10 +131,12 @@ ini_set('display_errors', 1);
         if ($stmt->execute()) {
 
             $_SESSION['msg'] = "Employee deleted successfully.";
+			echo "CEmployee deleted successfullyt";
 
         } else {
 
-            $_SESSION['msg'] = "Delete failed: " . $stmt->error;
+            $_SESSION['msg'] = "Cannot delete employee. Divice records exist: " . $stmt->error;
+			echo "Cannot delete employee. Divice records exist";
         }
 
         $stmt->close();
