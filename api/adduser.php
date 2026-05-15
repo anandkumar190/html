@@ -113,7 +113,7 @@ if(!isset($_SESSION['tittu']))
 
     if (!$stmt) {
 
-        $_SESSION['msg'] = "Prepare failed: " . $con->error;
+        echo "Prepare failed: " . $con->error;
 
     } else {
 
@@ -121,11 +121,11 @@ if(!isset($_SESSION['tittu']))
 
         if ($stmt->execute()) {
 
-            $_SESSION['msg'] = "User deleted successfully";
+            echo "User deleted successfully";
 
         } else {
 
-            $_SESSION['msg'] = "Delete failed: " . $stmt->error;
+           echo  "Delete failed: " . $stmt->error;
         }
 
         $stmt->close();
