@@ -9,11 +9,12 @@ if(isset($_GET['distributor_visit']))
     extract($_POST);
     $response = array();
     
+
     // Validate required parameters
     if(empty($distributorid)) {
         $response["status"] = "0";
         $response["message"] = "Distributor ID is required";
-        echo json_encode($response);
+        echo json_encode($_POST);
         return;
     }
     
