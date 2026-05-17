@@ -25,7 +25,7 @@ $mail->send();
 
  <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 require("connect.php");
 
 use PHPMailer\PHPMailer\PHPMailer;
