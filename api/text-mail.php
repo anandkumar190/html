@@ -24,7 +24,7 @@ $mail->send();
 
 
  <?php
-die("HI");
+
 require __DIR__ . '/../vendor/autoload.php';
 require("connect.php");
 
