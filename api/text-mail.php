@@ -1,26 +1,4 @@
-<!-- 
 
-use PHPMailer\PHPMailer\PHPMailer;
-
-$mail = new PHPMailer();
-
-$mail->isSMTP();
-$mail->Host = 'smtp.gmail.com';
-$mail->SMTPAuth = true;
-$mail->Username = 'your@gmail.com';
-$mail->Password = 'password';
-$mail->SMTPSecure = 'tls';
-$mail->Port = 587;
-
-$mail->setFrom('your@gmail.com', 'System');
-$mail->addAddress('manager@gmail.com');
-
-$mail->Subject = 'Daily Report';
-$mail->Body    = 'Today report attached';
-
-$mail->send();
-
- -->
 
 
  <?php
