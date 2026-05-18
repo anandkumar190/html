@@ -51,7 +51,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 
 
 
-function exportEmployeeReport(bool $download = true): string {
+function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
     // -------------------------------------------------
     // Current Date
