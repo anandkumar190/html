@@ -1,54 +1,7 @@
 <?php 
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
 
-    function getDatesFromRange($start, $end, $format = 'Y-m-d') { 
-      
-    // Declare an empty array 
-    $array = array(); 
-      
-    // Variable that store the date interval 
-    // of period 1 day 
-    $interval = new DateInterval('P1D'); 
-  
-    $realEnd = new DateTime($end); 
-    $realEnd->add($interval); 
-  
-    $period = new DatePeriod(new DateTime($start), $interval, $realEnd); 
-  
-    // Use loop to store date into array 
-    foreach($period as $date) {                  
-        $array[] = $date->format($format);  
-    } 
-  
-    // Return the array elements 
-    return $array; 
-} 
-    //date function close
-	
-	
-function distance($lat1, $lon1, $lat2, $lon2, $unit) {
-  if (($lat1 == $lat2) && ($lon1 == $lon2)) {
-    return 0;
-  }
-  else {
-    $theta = $lon1 - $lon2;
-    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-    $dist = acos($dist);
-    $dist = rad2deg($dist);
-    $miles = $dist * 60 * 1.1515;
-    $unit = strtoupper($unit);
 
-    if ($unit == "K") {
-      return ($miles * 1.609344);
-    } else if ($unit == "N") {
-      return ($miles * 0.8684);
-    } else {
-      return $miles;
-    }
-  }
-}
+
 	
 	
 	
@@ -98,7 +51,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			  $workingday=0;
 			  $leave=0;
 			  $rowData='';
-		foreach ($dates as $dd) {
+		   	foreach ($dates as $dd) {
 			$selectdate = date('Y-m-d', strtotime($dd));
 			
 			// Reset for each day
@@ -222,47 +175,47 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				];
 			}
 
-			// Output table row
-			$rowData .= "<tr>";
-			$rowData .= "<td>";
+				// Output table row
+				$rowData .= "<tr>";
+				$rowData .= "<td>";
 
-			$day = date('l', strtotime($dd));
-			if ($day == "Sunday") {
-				$sunday++;
-				$rowData .= date('d-M-Y', strtotime($dd)) . " " . $day;
-			} else {
-				$rowData .= date('d-M-Y', strtotime($dd));
-			}
-			$rowData .= "</td>";
-			$rowData .= "<td> $day </td>";
+				$day = date('l', strtotime($dd));
+				if ($day == "Sunday") {
+					$sunday++;
+					$rowData .= date('d-M-Y', strtotime($dd)) . " " . $day;
+				} else {
+					$rowData .= date('d-M-Y', strtotime($dd));
+				}
+				$rowData .= "</td>";
+				$rowData .= "<td> $day </td>";
 
-			// Start time
-			$rowData .= "<td>";
-			if ($starttimeStamp > 0) {
-				$starttimearray[] = $starttimeStamp;
-				$workingday++;
-				$rowData .= date('h:i:s A', $starttimeStamp);
-			} else {
-				if ($day != "Sunday") $leave++;
-				$rowData .= "Leave";
-			}
-			$rowData .= "</td>";
+				// Start time
+				$rowData .= "<td>";
+				if ($starttimeStamp > 0) {
+					$starttimearray[] = $starttimeStamp;
+					$workingday++;
+					$rowData .= date('h:i:s A', $starttimeStamp);
+				} else {
+					if ($day != "Sunday") $leave++;
+					$rowData .= "Leave";
+				}
+				$rowData .= "</td>";
 
-			// End time
-			$rowData .= "<td>";
-			if ($endtimeStamp > 0) {
-				$endtimearray[] = $endtimeStamp;
-				$rowData .= date('h:i:s A', $endtimeStamp);
-			} else {
-				$rowData .= "Leave";
-			}
-			$rowData .= "</td>";
+				// End time
+				$rowData .= "<td>";
+				if ($endtimeStamp > 0) {
+					$endtimearray[] = $endtimeStamp;
+					$rowData .= date('h:i:s A', $endtimeStamp);
+				} else {
+					$rowData .= "Leave";
+				}
+				$rowData .= "</td>";
 
-			$rowData .= "<td>{$workingTime}</td>";
+				$rowData .= "<td>{$workingTime}</td>";
 
-			// Sum using the decimal value
-            $totalMinuts += $workingMinuts;
-			// Visit details table inside a cell
+				// Sum using the decimal value
+				$totalMinuts += $workingMinuts;
+				// Visit details table inside a cell
 
 				// 1. Area Name(s)
 				$rowData .= "<td>";
@@ -340,10 +293,10 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				}
 				$rowData .= "</td>";
 
-			
-			$rowData .= "<td></td>";
-			$rowData .= "</tr>";
-		}
+				
+				$rowData .= "<td></td>";
+				$rowData .= "</tr>";
+			}
 
 
 
@@ -368,7 +321,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			  $avgendtime= (count($endtimearray)>0 and  $totaletime>0) ? round($totaletime/count($endtimearray)):0;
 			  
 
-       $data="<table id='userstable' border='1' cellpadding='10' cellspacing='0' class='table'  data-processing='true' data-filtering='true' data-sorting='true'>
+       		$data="<table id='userstable' border='1' cellpadding='10' cellspacing='0' class='table'  data-processing='true' data-filtering='true' data-sorting='true'>
            
               <tr>
                 <th colspan='6'>Employee Name : $name </th><th colspan='11'> Total Days Reported for Work : $workingday </th>
@@ -399,61 +352,61 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 
 			  </tr>";
 
-	$data.=$rowData;
-				
-	$avgHours = floor($avgTotalMinuts / 60);
-	$avgTotalProductivePercentage= ($workingday>0 and $totalProductivePercentage>0)?floor($totalProductivePercentage/$workingday):0;
-	$avgMins = $avgTotalMinuts % 60;
+			$data.=$rowData;
+						
+			$avgHours = floor($avgTotalMinuts / 60);
+			$avgTotalProductivePercentage= ($workingday>0 and $totalProductivePercentage>0)?floor($totalProductivePercentage/$workingday):0;
+			$avgMins = $avgTotalMinuts % 60;
 
 	
 
 
-	    $data.="<tr>
-		         <th>Averages</th> <th> </th> 
-				 <th>".date('H:i:s',$avgstarttime)."</th>
-				 <th>".date('H:i:s',$avgendtime)."</th>
-				 <th>".$avgHours . " Hrs " . $avgMins . " Mins </th>
-				 <th>  </th> 
-				 <th>".$totalold."</th>
-				 <th>".$totalnew."</th>
-				 <th>".($totalold+$totalnew)."</th>
-				 <th>".$totalothervisit."</th>
-				 <th>".$productivOutlets."</th>
-				 <th>".$totaloutletsNotVisited."</th>
-				 <th>".$avgTotalProductivePercentage."%</th>
-				 <th>".$totalProductivValueOrders."</th>
-				 <th></th>
-		       </tr>";		  
-		$data.="</table>";
+			$data.="<tr>
+					<th>Averages</th> <th> </th> 
+					<th>".date('H:i:s',$avgstarttime)."</th>
+					<th>".date('H:i:s',$avgendtime)."</th>
+					<th>".$avgHours . " Hrs " . $avgMins . " Mins </th>
+					<th>  </th> 
+					<th>".$totalold."</th>
+					<th>".$totalnew."</th>
+					<th>".($totalold+$totalnew)."</th>
+					<th>".$totalothervisit."</th>
+					<th>".$productivOutlets."</th>
+					<th>".$totaloutletsNotVisited."</th>
+					<th>".$avgTotalProductivePercentage."%</th>
+					<th>".$totalProductivValueOrders."</th>
+					<th></th>
+				</tr>";		  
+			$data.="</table>";
 
 
-		
-		// $data.="<table border='1' cellspacing='0' cellpadding='5'>";
-		
-		// $data.="<tr>
-		//          <th></th><th></th>
-		//        </tr>";
-	    // $data.="<tr>
-		//          <th></th><th></th>
-		//        </tr>";
-		
-		// $data.="<tr>
-		//          <th>Total Working Days</th><th>".$workingday."</th>
-		//        </tr>";
-		// $data.="<tr>
-		//          <th>Total Leave </th><th>".$leave."</th>
-		//        </tr>";	   		  
-		// $data.="<tr>
-		//          <th>Total Sunday</th><th>".$sunday."</th>
-		//        </tr>";
-		// $data.="</table>";
-		header('Content-type: application/excel');
-        header("Content-Disposition: attachment; filename=$name Report.html");
-        header("Pragma: no-cache");
-        header("Expires: 0");
-	    echo $data;
+			
+			// $data.="<table border='1' cellspacing='0' cellpadding='5'>";
+			
+			// $data.="<tr>
+			//          <th></th><th></th>
+			//        </tr>";
+			// $data.="<tr>
+			//          <th></th><th></th>
+			//        </tr>";
+			
+			// $data.="<tr>
+			//          <th>Total Working Days</th><th>".$workingday."</th>
+			//        </tr>";
+			// $data.="<tr>
+			//          <th>Total Leave </th><th>".$leave."</th>
+			//        </tr>";	   		  
+			// $data.="<tr>
+			//          <th>Total Sunday</th><th>".$sunday."</th>
+			//        </tr>";
+			// $data.="</table>";
+			header('Content-type: application/excel');
+			header("Content-Disposition: attachment; filename=$name Report.html");
+			header("Pragma: no-cache");
+			header("Expires: 0");
+			echo $data;
 
-		exit();
+			exit();
        
    }
     ?>
