@@ -1,6 +1,55 @@
 <?php 
 
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
 
+    function getDatesFromRange($start, $end, $format = 'Y-m-d') { 
+      
+    // Declare an empty array 
+    $array = array(); 
+      
+    // Variable that store the date interval 
+    // of period 1 day 
+    $interval = new DateInterval('P1D'); 
+  
+    $realEnd = new DateTime($end); 
+    $realEnd->add($interval); 
+  
+    $period = new DatePeriod(new DateTime($start), $interval, $realEnd); 
+  
+    // Use loop to store date into array 
+    foreach($period as $date) {                  
+        $array[] = $date->format($format);  
+    } 
+  
+    // Return the array elements 
+    return $array; 
+} 
+    //date function close
+	
+	
+function distance($lat1, $lon1, $lat2, $lon2, $unit) {
+  if (($lat1 == $lat2) && ($lon1 == $lon2)) {
+    return 0;
+  }
+  else {
+    $theta = $lon1 - $lon2;
+    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+    $dist = acos($dist);
+    $dist = rad2deg($dist);
+    $miles = $dist * 60 * 1.1515;
+    $unit = strtoupper($unit);
+
+    if ($unit == "K") {
+      return ($miles * 1.609344);
+    } else if ($unit == "N") {
+      return ($miles * 0.8684);
+    } else {
+      return $miles;
+    }
+  }
+}
 
 	
 	
