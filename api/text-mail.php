@@ -4,85 +4,89 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require __DIR__ . '/../vendor/autoload.php';
+require 'daly-report-os.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
 
 /*
 |--------------------------------------------------------------------------
-| Report URL
+| Generate Report HTML
 |--------------------------------------------------------------------------
-|
-| This URL should directly generate Excel report
-|
 */
 
-$reportUrl =
-    "https://cartroute.com/api/daly-report-os.php";
+$html =
+    exportEmployeeReport($con, false);
 
 /*
 |--------------------------------------------------------------------------
-| Report File Name
+| PDF File
 |--------------------------------------------------------------------------
 */
 
-$reportFileName =
+$pdfFileName =
     "All_Salesmen_Report_" .
     date('d_M_Y') .
-    ".xls";
-
-/*
-|--------------------------------------------------------------------------
-| Reports Directory
-|--------------------------------------------------------------------------
-*/
-
-$reportsDir = __DIR__ . "/reports";
-
-/*
-|--------------------------------------------------------------------------
-| Create Reports Folder If Missing
-|--------------------------------------------------------------------------
-*/
-
-if (!is_dir($reportsDir)) {
-
-    mkdir($reportsDir, 0777, true);
-}
-
-/*
-|--------------------------------------------------------------------------
-| Full Save Path
-|--------------------------------------------------------------------------
-*/
+    ".pdf";
 
 $savePath =
-    $reportsDir . "/" . $reportFileName;
+    sys_get_temp_dir() .
+    "/" .
+    $pdfFileName;
 
 /*
 |--------------------------------------------------------------------------
-| Download Report
+| Dompdf Setup
 |--------------------------------------------------------------------------
 */
 
-$reportContent =
-    file_get_contents($reportUrl);
+$options = new Options();
 
-if ($reportContent === false) {
+$options->set('isRemoteEnabled', true);
 
-    die("Unable to generate report.");
-}
+$dompdf = new Dompdf($options);
 
 /*
 |--------------------------------------------------------------------------
-| Save Report File
+| Load HTML
+|--------------------------------------------------------------------------
+*/
+
+$dompdf->loadHtml($html);
+
+/*
+|--------------------------------------------------------------------------
+| Paper Size
+|--------------------------------------------------------------------------
+*/
+
+$dompdf->setPaper(
+    'A4',
+    'landscape'
+);
+
+/*
+|--------------------------------------------------------------------------
+| Render PDF
+|--------------------------------------------------------------------------
+*/
+
+$dompdf->render();
+
+/*
+|--------------------------------------------------------------------------
+| Save PDF
 |--------------------------------------------------------------------------
 */
 
 file_put_contents(
     $savePath,
-    $reportContent
+    $dompdf->output()
 );
+
 
 /*
 |--------------------------------------------------------------------------
@@ -135,8 +139,7 @@ try {
     | Mail Content
     |--------------------------------------------------------------------------
     */
-
-    $mail->isHTML(true);
+   $mail->isHTML(true);
 
     $mail->Subject =
         'All Salesmen Daily Report - ' .
@@ -154,13 +157,13 @@ try {
 
     /*
     |--------------------------------------------------------------------------
-    | Attach Report
+    | Attach PDF
     |--------------------------------------------------------------------------
     */
 
     $mail->addAttachment(
         $savePath,
-        $reportFileName
+        $pdfFileName
     );
 
     /*
@@ -173,11 +176,8 @@ try {
 
     /*
     |--------------------------------------------------------------------------
-    | Optional Cleanup
+    | Delete Temp PDF
     |--------------------------------------------------------------------------
-    |
-    | Delete report after sending
-    |
     */
 
     if (file_exists($savePath)) {
