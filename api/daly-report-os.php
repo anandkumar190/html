@@ -523,7 +523,7 @@ function exportEmployeeReport(mysqli $con): void
 
     echo $html;
 
-    exit;
+   // exit;
 }
 
 
