@@ -19,7 +19,7 @@ use Dompdf\Options;
 */
 
 $html =
-    exportEmployeeReport($con, false);
+    exportEmployeeReport(false);
 
 /*
 |--------------------------------------------------------------------------
