@@ -49,8 +49,11 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 
 
 
-function exportEmployeeReport(mysqli $con): void
-{
+function exportEmployeeReport(
+    mysqli $con,
+    bool $download = true
+): string {
+
     // -------------------------------------------------
     // Current Date
     // -------------------------------------------------
@@ -106,7 +109,7 @@ function exportEmployeeReport(mysqli $con): void
     $grandTotalOrderValue = 0;
 
     // -------------------------------------------------
-    // Loop All Employees
+    // Loop Employees
     // -------------------------------------------------
     while ($employee = $employeeResult->fetch_assoc()) {
 
@@ -118,17 +121,12 @@ function exportEmployeeReport(mysqli $con): void
         // -------------------------------------------------
         $activityStmt = $con->prepare("
             SELECT
-                oa.activitydate,
                 oa.activitytime,
                 oa.activitytype,
                 oa.outletid,
                 oa.visittype,
 
-                o.id AS outlet_id,
-                o.name AS outlet_name,
-                o.locality,
                 o.areaid,
-                o.outlettype,
 
                 a.area AS area_name
 
@@ -169,8 +167,11 @@ function exportEmployeeReport(mysqli $con): void
             SELECT
                 o.areaid,
 
-                COUNT(DISTINCT b.outlet_id) AS productive_outlets,
-                SUM(b.total_amount) AS total_order_value
+                COUNT(DISTINCT b.outlet_id)
+                    AS productive_outlets,
+
+                SUM(b.total_amount)
+                    AS total_order_value
 
             FROM booking b
 
@@ -197,15 +198,8 @@ function exportEmployeeReport(mysqli $con): void
 
         while ($booking = $bookingResult->fetch_assoc()) {
 
-            $areaId = $booking['areaid'];
-
-            $bookings[$areaId] = $booking;
+            $bookings[$booking['areaid']] = $booking;
         }
-
-        // -------------------------------------------------
-        // Day Name
-        // -------------------------------------------------
-        $dayName = date('l', strtotime($reportDate));
 
         // -------------------------------------------------
         // Start / End Time
@@ -217,9 +211,11 @@ function exportEmployeeReport(mysqli $con): void
 
         if (!empty($dayActivities)) {
 
-            $startTime = $dayActivities[0]['activitytime'];
+            $startTime =
+                $dayActivities[0]['activitytime'];
 
-            $endTime = end($dayActivities)['activitytime'];
+            $endTime =
+                end($dayActivities)['activitytime'];
 
             $startStamp = strtotime($startTime);
 
@@ -229,16 +225,13 @@ function exportEmployeeReport(mysqli $con): void
 
                 $diff = abs($endStamp - $startStamp);
 
-                $hours = floor($diff / 3600);
-
-                $mins = floor(($diff % 3600) / 60);
-
-                $workingMinutes = ($hours * 60) + $mins;
+                $workingMinutes =
+                    floor($diff / 60);
             }
         }
 
         // -------------------------------------------------
-        // Area Calculations
+        // Area Data
         // -------------------------------------------------
         $areas = [];
 
@@ -259,17 +252,19 @@ function exportEmployeeReport(mysqli $con): void
                 ];
             }
 
-            $areas[$areaId]['visited'][$activity['outletid']] = true;
+            $areas[$areaId]['visited']
+                [$activity['outletid']] = true;
 
             if (
-                $activity['activitytype'] === 'New Outlet Create'
+                $activity['activitytype']
+                === 'New Outlet Create'
             ) {
                 $areas[$areaId]['new_outlets']++;
             }
         }
 
         // -------------------------------------------------
-        // Prepare Columns
+        // Column Data
         // -------------------------------------------------
         $routeNames = '';
         $routeOutletCounts = '';
@@ -281,16 +276,7 @@ function exportEmployeeReport(mysqli $con): void
         $productivePercentages = '';
         $orderValues = '';
 
-        $employeeTotalOutlets = 0;
-        $employeeTotalNewOutlets = 0;
-        $employeeTotalVisited = 0;
-        $employeeTotalProductive = 0;
-        $employeeTotalNotVisited = 0;
-        $employeeTotalOrderValue = 0;
-
         foreach ($areas as $areaId => $areaData) {
-
-            $routeName = $areaData['area_name'];
 
             $existingOutlets =
                 $outletsByArea[$areaId] ?? 0;
@@ -321,16 +307,11 @@ function exportEmployeeReport(mysqli $con): void
 
             $productivePercentage =
                 $finalOutlets > 0
-                    ? round(($productive / $finalOutlets) * 100, 2)
+                    ? round(
+                        ($productive / $finalOutlets) * 100,
+                        2
+                    )
                     : 0;
-
-            // Employee Totals
-            $employeeTotalOutlets += $existingOutlets;
-            $employeeTotalNewOutlets += $newOutlets;
-            $employeeTotalVisited += $visited;
-            $employeeTotalProductive += $productive;
-            $employeeTotalNotVisited += $notVisited;
-            $employeeTotalOrderValue += $orderValue;
 
             // Grand Totals
             $grandTotalOutlets += $existingOutlets;
@@ -341,35 +322,19 @@ function exportEmployeeReport(mysqli $con): void
             $grandTotalOrderValue += $orderValue;
 
             // Output
-            $routeNames .= $routeName . '<br>';
-
-            $routeOutletCounts .=
-                $existingOutlets . '<br>';
-
-            $newOutletCounts .=
-                $newOutlets . '<br>';
-
-            $newTotals .=
-                $finalOutlets . '<br>';
-
-            $visitedCounts .=
-                $visited . '<br>';
-
-            $productiveCounts .=
-                $productive . '<br>';
-
-            $notVisitedCounts .=
-                $notVisited . '<br>';
-
-            $productivePercentages .=
-                $productivePercentage . "%<br>";
-
-            $orderValues .=
-                number_format($orderValue, 2) . '<br>';
+            $routeNames .= $areaData['area_name'] . '<br>';
+            $routeOutletCounts .= $existingOutlets . '<br>';
+            $newOutletCounts .= $newOutlets . '<br>';
+            $newTotals .= $finalOutlets . '<br>';
+            $visitedCounts .= $visited . '<br>';
+            $productiveCounts .= $productive . '<br>';
+            $notVisitedCounts .= $notVisited . '<br>';
+            $productivePercentages .= $productivePercentage . "%<br>";
+            $orderValues .= number_format($orderValue, 2) . '<br>';
         }
 
         // -------------------------------------------------
-        // Working Time Text
+        // Working Time
         // -------------------------------------------------
         $workingHours = floor($workingMinutes / 60);
 
@@ -387,10 +352,6 @@ function exportEmployeeReport(mysqli $con): void
         <tr>
 
             <td>{$employeeName}</td>
-
-            <td>" . date('d-M-Y', strtotime($reportDate)) . "</td>
-
-            <td>{$dayName}</td>
 
             <td>" .
                 ($startTime
@@ -431,7 +392,7 @@ function exportEmployeeReport(mysqli $con): void
     }
 
     // -------------------------------------------------
-    // Overall Productive %
+    // Overall %
     // -------------------------------------------------
     $overallProductivePercentage =
         $grandTotalOutlets > 0
@@ -442,27 +403,25 @@ function exportEmployeeReport(mysqli $con): void
             : 0;
 
     // -------------------------------------------------
-    // Generate HTML
+    // HTML
     // -------------------------------------------------
     $html = "
     <table border='1' cellpadding='8' cellspacing='0'>
 
         <tr>
-            <th colspan='16'>
+            <th colspan='14'>
                 All Salesmen Daily Report
             </th>
         </tr>
 
         <tr>
-            <th colspan='16'>
+            <th colspan='14'>
                 Report Date : {$period}
             </th>
         </tr>
 
         <tr>
             <th>Employee</th>
-            <th>Date</th>
-            <th>Day</th>
             <th>First Sales Call Time</th>
             <th>Last Sales Call Time</th>
             <th>Working Time</th>
@@ -482,13 +441,15 @@ function exportEmployeeReport(mysqli $con): void
 
         <tr>
 
-            <th colspan='7'>Grand Total</th>
+            <th colspan='5'>Grand Total</th>
 
             <th>{$grandTotalOutlets}</th>
 
             <th>{$grandTotalNewOutlets}</th>
 
-            <th>" . ($grandTotalOutlets + $grandTotalNewOutlets) . "</th>
+            <th>" .
+                ($grandTotalOutlets + $grandTotalNewOutlets) .
+            "</th>
 
             <th>{$grandTotalVisitedOutlets}</th>
 
@@ -498,7 +459,9 @@ function exportEmployeeReport(mysqli $con): void
 
             <th>{$overallProductivePercentage}%</th>
 
-            <th>" . number_format($grandTotalOrderValue, 2) . "</th>
+            <th>" .
+                number_format($grandTotalOrderValue, 2) .
+            "</th>
 
             <th></th>
 
@@ -508,22 +471,30 @@ function exportEmployeeReport(mysqli $con): void
     ";
 
     // -------------------------------------------------
-    // Export Excel
+    // Download
     // -------------------------------------------------
-    header("Content-Type: application/vnd.ms-excel");
+    if ($download) {
 
-    header(
-        "Content-Disposition: attachment; filename=\"All_Salesmen_Report_" .
-        date('d_M_Y') .
-        ".xls\""
-    );
+        header(
+            "Content-Type: application/vnd.ms-excel"
+        );
 
-    header("Pragma: no-cache");
-    header("Expires: 0");
+        header(
+            "Content-Disposition: attachment; filename=\"All_Salesmen_Report_" .
+            date('d_M_Y') .
+            ".xls\""
+        );
 
-    echo $html;
+        header("Pragma: no-cache");
 
-   // exit;
+        header("Expires: 0");
+
+        echo $html;
+
+        exit;
+    }
+
+    return $html;
 }
 
 

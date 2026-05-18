@@ -1,69 +1,92 @@
-
-
-
- <?php
-
+<?php
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require __DIR__ . '/../vendor/autoload.php';
-//require("connect.php");
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+/*
+|--------------------------------------------------------------------------
+| Report URL
+|--------------------------------------------------------------------------
+|
+| This URL should directly generate Excel report
+|
+*/
 
-
+$reportUrl =
+    "https://cartroute.com/api/daly-report-os.php";
 
 /*
 |--------------------------------------------------------------------------
-| Fetch Today's Sales
+| Report File Name
 |--------------------------------------------------------------------------
 */
 
-// $sql = "
-// SELECT 
-//     COUNT(id) as total_orders,
-//     SUM(total_amount) as total_sales
-// FROM orders
-// WHERE DATE(created_at) = CURDATE()
-// ";
-
-// $result = $con->query($sql);
-// $data = $result->fetch_assoc();
-
-// $totalOrders = $data['total_orders'] ?? 0;
-// $totalSales  = $data['total_sales'] ?? 0;
-
-    $totalOrders = 10;
-    $totalSales  = 10;
+$reportFileName =
+    "All_Salesmen_Report_" .
+    date('d_M_Y') .
+    ".xls";
 
 /*
 |--------------------------------------------------------------------------
-| Email Content
+| Reports Directory
 |--------------------------------------------------------------------------
 */
 
-$message = "
-<h2>Daily Sales Report</h2>
-
-<table border='1' cellpadding='10'>
-    <tr>
-        <th>Total Orders</th>
-        <th>Total Sales</th>
-    </tr>
-
-    <tr>
-        <td>{$totalOrders}</td>
-        <td>₹{$totalSales}</td>
-    </tr>
-</table>
-";
+$reportsDir = __DIR__ . "/reports";
 
 /*
 |--------------------------------------------------------------------------
-| PHPMailer Setup
+| Create Reports Folder If Missing
+|--------------------------------------------------------------------------
+*/
+
+if (!is_dir($reportsDir)) {
+
+    mkdir($reportsDir, 0777, true);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Full Save Path
+|--------------------------------------------------------------------------
+*/
+
+$savePath =
+    $reportsDir . "/" . $reportFileName;
+
+/*
+|--------------------------------------------------------------------------
+| Download Report
+|--------------------------------------------------------------------------
+*/
+
+$reportContent =
+    file_get_contents($reportUrl);
+
+if ($reportContent === false) {
+
+    die("Unable to generate report.");
+}
+
+/*
+|--------------------------------------------------------------------------
+| Save Report File
+|--------------------------------------------------------------------------
+*/
+
+file_put_contents(
+    $savePath,
+    $reportContent
+);
+
+/*
+|--------------------------------------------------------------------------
+| PHPMailer
 |--------------------------------------------------------------------------
 */
 
@@ -73,38 +96,94 @@ try {
 
     $mail->isSMTP();
 
-    $mail->Host       = 'smtp.gmail.com';
-    $mail->SMTPAuth   = true;
+    $mail->Host = 'smtp.gmail.com';
+
+    $mail->SMTPAuth = true;
+
     $mail->Username   = 'vivanfoods2@gmail.com';
     $mail->Password   = 'mxfbczbfrtobuaec';
 
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
 
-    $mail->Port       = 587;
+    $mail->SMTPSecure =
+        PHPMailer::ENCRYPTION_STARTTLS;
+
+    $mail->Port = 587;
 
     /*
     |--------------------------------------------------------------------------
-    | Sender & Receiver
+    | Sender
     |--------------------------------------------------------------------------
     */
 
-    $mail->setFrom('vivanfoods2@gmail.com', 'Sales System');
-
-    $mail->addAddress('eazroch@gmail.com');
+    $mail->setFrom(
+        'vivanfoods2@gmail.com',
+        'Sales System'
+    );
 
     /*
     |--------------------------------------------------------------------------
-    | Email Content
+    | Receiver
+    |--------------------------------------------------------------------------
+    */
+
+    $mail->addAddress(
+        'eazroch@gmail.com'
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mail Content
     |--------------------------------------------------------------------------
     */
 
     $mail->isHTML(true);
 
-    $mail->Subject = 'Daily Sales Report - ' . date('Y-m-d');
+    $mail->Subject =
+        'All Salesmen Daily Report - ' .
+        date('d-M-Y');
 
-    $mail->Body = $message;
+    $mail->Body = "
+        <h2>
+            All Salesmen Daily Report
+        </h2>
+
+        <p>
+            Please find attached today's report.
+        </p>
+    ";
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attach Report
+    |--------------------------------------------------------------------------
+    */
+
+    $mail->addAttachment(
+        $savePath,
+        $reportFileName
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Send Mail
+    |--------------------------------------------------------------------------
+    */
 
     $mail->send();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Optional Cleanup
+    |--------------------------------------------------------------------------
+    |
+    | Delete report after sending
+    |
+    */
+
+    if (file_exists($savePath)) {
+
+        unlink($savePath);
+    }
 
     echo "Report Sent Successfully";
 
