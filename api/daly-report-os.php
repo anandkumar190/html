@@ -2,6 +2,12 @@
 
 ini_set('memory_limit', '250M');
 require_once(__DIR__ . "/../connect.php");
+
+if (!$con) {
+    die("Database connection missing");
+}
+
+
     function getDatesFromRange($start, $end, $format = 'Y-m-d') { 
       
     // Declare an empty array 
