@@ -64,7 +64,7 @@ $dompdf->loadHtml($html);
 */
 
 $dompdf->setPaper(
-    'A4',
+    'A3',
     'landscape'
 );
 

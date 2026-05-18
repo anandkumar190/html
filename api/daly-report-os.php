@@ -405,8 +405,34 @@ function exportEmployeeReport(
     // -------------------------------------------------
     // HTML
     // -------------------------------------------------
-    $html = "
-    <table border='1' cellpadding='8' cellspacing='0'>
+    $html = "<style>
+
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 9px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    th, td {
+        border: 1px solid #000;
+        padding: 3px;
+        font-size: 8px;
+        word-wrap: break-word;
+        vertical-align: top;
+    }
+
+    th {
+        background-color: #f2f2f2;
+    }
+
+</style>
+
+    <table>
 
         <tr>
             <th colspan='14'>
