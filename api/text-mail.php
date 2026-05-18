@@ -5,6 +5,7 @@ ini_set('display_errors', 1);
 
 require __DIR__ . '/../vendor/autoload.php';
 require 'daly-report-os.php';
+require_once(__DIR__ . "/../connect.php");
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -19,7 +20,7 @@ use Dompdf\Options;
 */
 
 $html =
-    exportEmployeeReport(false);
+    exportEmployeeReport($con,false);
 
 /*
 |--------------------------------------------------------------------------
