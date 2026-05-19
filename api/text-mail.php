@@ -135,6 +135,7 @@ try {
         'eazroch@gmail.com'
     );
 
+    $mail->addBCC('Rahul@fricbergen.com');
     /*
     |--------------------------------------------------------------------------
     | Mail Content
