@@ -20,7 +20,7 @@
           <div class="nav-tabs-custom">
             <!-- Tabs within a box -->
             <ul class="nav nav-tabs pull-left">
-              <li class="active"><a href="#today-activity" data-toggle="tab">Team Report</a></li>
+              <li class="active"><a href="#today-activity" data-toggle="tab"> Team Report </a></li>
               
               
             </ul>

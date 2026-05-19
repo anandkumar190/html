@@ -149,7 +149,7 @@ try {
 
     $mail->Body = "
         <h2>
-            All Salesmen Daily Report
+            All Salesmen Daily Report 
         </h2>
 
         <p>
