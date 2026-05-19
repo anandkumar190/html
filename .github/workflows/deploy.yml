@@ -18,7 +18,17 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
+          timeout: 60s
+          command_timeout: 15m
+          debug: true
 
           script: |
+            echo "Connected"
+
             cd /var/www/html
+
+            pwd
+
+            git status
+
             git pull origin main
