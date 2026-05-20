@@ -105,7 +105,7 @@ $dsVisitList=[];
 				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']] = $dsVisit['visit_reasons'];
 			}
 
-  
+  die($dsVisitList);
 		$employeeName = '';
 
 		$stmt = $con->prepare("
