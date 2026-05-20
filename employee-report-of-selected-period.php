@@ -85,6 +85,7 @@ $dsVisitList=[];
 			$visit = $con->prepare("
 					SELECT 
 					MAX(area_id) AS area_id,
+					MAX(user_id) As user_id,
 					visit_date,
 					GROUP_CONCAT(CONCAT(reason_type, ' - ', reason) SEPARATOR ', ') AS visit_reasons
 					FROM distributor_visits
@@ -99,8 +100,9 @@ $dsVisitList=[];
 
 			$dsVisits = $visit->get_result();
 
+
 			while ($dsVisit = $dsVisits->fetch_assoc()) {
-				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']]=$dsVisit['reason_type'].'('.$dsVisits['reason'].')';
+				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']] = $dsVisit['visit_reasons'];
 			}
 
   
@@ -401,9 +403,9 @@ $dsVisitList=[];
 					$totalProductivValueOrders+=$vv['total_value_orders'];
 				}
 				$rowData .= "</td>";
-
+					$dsVistedStatus=$dsVisitList[$employee][$selectdate]?$dsVisitList[$employee][$selectdate]:" ";
 				
-				$rowData .= "<td> </td>";
+				$rowData .= "<td>" .$dsVistedStatus. "</td>";
 				$rowData .= "</tr>";
 			}
 
