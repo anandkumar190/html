@@ -87,7 +87,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			LIMIT 1
 		");
 
-		$stmt->bind_param("i", $employeeId);
+		$stmt->bind_param("i", $employee);
 		$stmt->execute();
 
 		$result = $stmt->get_result();
@@ -454,7 +454,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 					<th>".$totaloutletsNotVisited."</th>
 					<th>".$avgTotalProductivePercentage."%</th>
 					<th>".$totalProductivValueOrders."</th>
-					<th></th>
+					<th> </th>
 				</tr>";		  
 			$data.="</table>";
 
