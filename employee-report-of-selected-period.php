@@ -104,7 +104,8 @@ $dsVisitList=[];
 			while ($dsVisit = $dsVisits->fetch_assoc()) {
 				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']] = $dsVisit['visit_reasons'];
 			}
-
+		echo "start=".$start."-"."end==".$end;
+  print(implode('--',$dates));
   die(implode('-',$dsVisitList));
 		$employeeName = '';
 
