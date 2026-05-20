@@ -403,7 +403,7 @@ $dsVisitList=[];
 					$totalProductivValueOrders+=$vv['total_value_orders'];
 				}
 				$rowData .= "</td>";
-					$dsVistedStatus=$dsVisitList[$employee][$selectdate]?$dsVisitList[$employee][$selectdate]:" ";
+					$dsVistedStatus=@$dsVisitList[$employee][$selectdate]?@$dsVisitList[$employee][$selectdate]:" ";
 				
 				$rowData .= "<td>" .$dsVistedStatus. "</td>";
 				$rowData .= "</tr>";
