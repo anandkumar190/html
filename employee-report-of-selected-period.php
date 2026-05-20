@@ -68,6 +68,8 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 	   $end=date("Y-m-d",$end);
 	   $employee=$_POST['employee'];
 
+
+
 	//    $res=mysqli_query($con,"select e.name from employees e where e.usertype='1' and e.id='$employee'");
 	   
 	//    while($row=mysqli_fetch_array($res))
@@ -75,15 +77,37 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 	// 	  $name=$row["name"];
 		
 	//    }
+$dsVisitList=[];
+	   $start=date("Y-m-d",$start);
+	   $end=date("Y-m-d",$end);
 	   
 
+			$visit = $con->prepare("
+				SELECT reason_type, reason ,area_id,visit_date
+				FROM distributor_visits 
+				WHERE user_id = ? 
+				AND visit_date BETWEEN ? AND ?
+				GROUP BY area_id
+			");
+
+			$visit->bind_param("iss", $employee, $start, $end);
+
+			$visit->execute();
+
+			$dsVisits = $visit->get_result();
+
+			while ($dsVisit = $dsVisits->fetch_assoc()) {
+				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']]=$dsVisit['reason_type'].'('.$dsVisits['reason'].')';
+			}
+
+  
 		$employeeName = '';
 
 		$stmt = $con->prepare("
-			SELECT name
+			SELECT name,usertype
 			FROM employees
 			WHERE id=?
-			AND usertype='1'
+			AND usertype IN (1,3)
 			LIMIT 1
 		");
 
@@ -130,6 +154,9 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			  $workingday=0;
 			  $leave=0;
 			  $rowData='';
+
+
+
 		   	foreach ($dates as $dd) {
 			$selectdate = date('Y-m-d', strtotime($dd));
 			
@@ -373,7 +400,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				$rowData .= "</td>";
 
 				
-				$rowData .= "<td></td>";
+				$rowData .= "<td> </td>";
 				$rowData .= "</tr>";
 			}
 
