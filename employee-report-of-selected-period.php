@@ -67,14 +67,44 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 	   $start=date("Y-m-d",$start);
 	   $end=date("Y-m-d",$end);
 	   $employee=$_POST['employee'];
-	   $res=mysqli_query($con,"select e.name from employees e where e.usertype='1' and e.id='$employee'");
+
+	//    $res=mysqli_query($con,"select e.name from employees e where e.usertype='1' and e.id='$employee'");
 	   
-	   while($row=mysqli_fetch_array($res))
-	   {
-		  $name=$row["name"];
+	//    while($row=mysqli_fetch_array($res))
+	//    {
+	// 	  $name=$row["name"];
 		
-	   }
+	//    }
 	   
+
+		$employeeName = '';
+
+		$stmt = $con->prepare("
+			SELECT name
+			FROM employees
+			WHERE id=?
+			AND usertype='1'
+			LIMIT 1
+		");
+
+		$stmt->bind_param("i", $employeeId);
+		$stmt->execute();
+
+		$result = $stmt->get_result();
+
+		if ($row = $result->fetch_assoc()) {
+			$employeeName = $row['name'];
+		}
+
+		$stmt->close();
+
+		if (empty($employeeName)) {
+			die("Employee Not Found");
+		}
+
+		$name=$employeeName;
+
+
 	   $dates=getDatesFromRange($start,$end);
 	   $totalCount=count($dates);
 	   
