@@ -83,11 +83,14 @@ $dsVisitList=[];
 
 
 			$visit = $con->prepare("
-				SELECT reason_type, reason ,area_id,visit_date
-				FROM distributor_visits 
-				WHERE user_id = ? 
-				AND visit_date BETWEEN ? AND ?
-				GROUP BY area_id
+					SELECT 
+					MAX(area_id) AS area_id,
+					visit_date,
+					GROUP_CONCAT(CONCAT(reason_type, ' - ', reason) SEPARATOR ', ') AS visit_reasons
+					FROM distributor_visits
+					WHERE user_id = ?
+					AND visit_date BETWEEN ? AND ?
+					GROUP BY visit_date
 			");
 
 			$visit->bind_param("iss", $employee, $start, $end);
