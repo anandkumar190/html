@@ -78,9 +78,9 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 		
 	//    }
 $dsVisitList=[];
-	   $start=date("Y-m-d",$start);
-	   $end=date("Y-m-d",$end);
-	   
+
+
+
 
 			$visit = $con->prepare("
 				SELECT reason_type, reason ,area_id,visit_date
