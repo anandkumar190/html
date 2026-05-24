@@ -204,7 +204,15 @@ ini_set('display_startup_errors', '1');
 		  }
 		  
 		   $emppass = mysql_native_password_hash($emppass);
-	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',designationid='$empdesignation',roleid='$emprole',managerid='$empmanager',reportsto='$empreportto',salary='$empsalary',commission='$empcomm',doj='$empdoj',dol='$empdol',image='$filename',lastlogin='$datetime',password='$emppass' where id='$id'") or die(mysqli_error($con));
+		   //designationid='$empdesignation',
+		   // roleid='$emprole',
+		   // managerid='$empmanager',
+		   // reportsto='$empreportto',
+		   // salary='$empsalary',
+		   // commission='$empcomm',
+		   // doj='$empdoj',
+		   // dol='$empdol'
+	      mysqli_query($con,"update  employees set name='$empname',empid='$empcode',email='$empemail',contact='$empcontact',address='$empaddress',image='$filename',lastlogin='$datetime',password='$emppass' where id='$id'") or die(mysqli_error($con));
 	      if(mysqli_affected_rows($con)>0)
        	  {
 	       if(move_uploaded_file($tmpname,"../imgusers/".$filename))
