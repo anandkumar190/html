@@ -9,15 +9,15 @@
 		$email='';
 		$contact='';
 		$address='';
-		$designationid='';
-		$roleid='';
-		$managerid='';
-		$reportsto='';
-		$image='';
-		$doj='';
-		$dol='';
-		$salary='';
-		$commission='';
+		// $designationid='';
+		// $roleid='';
+		// $managerid='';
+		// $reportsto='';
+		// $image='';
+		// $doj='';
+		// $dol='';
+		// $salary='';
+		// $commission='';
 		$password='';
 		
   if(isset($_GET['editid']))
@@ -33,15 +33,15 @@
 		$email=$row['email'];
 		$contact=$row['contact'];
 		$address=$row['address'];
-		$designationid=$row['designationid'];
-		$roleid=$row['roleid'];
-		$managerid=$row['managerid'];
-		$reportsto=$row['reportsto'];
-		$image=$row['image'];
-		$doj=$row['doj'];
-		$dol=$row['dol'];
-		$salary=$row['salary'];
-		$commission=$row['commission'];
+		// $designationid=$row['designationid'];
+		// $roleid=$row['roleid'];
+		// $managerid=$row['managerid'];
+		// $reportsto=$row['reportsto'];
+		// $image=$row['image'];
+		// $doj=$row['doj'];
+		// $dol=$row['dol'];
+		// $salary=$row['salary'];
+		// $commission=$row['commission'];
 		$password=$row['password'];
 	}
   }
@@ -212,14 +212,16 @@ function sendData(){
 		var empemail = $('#empemail').val();
 		var empcontact = $('#empcontact').val();
 		var empaddress = $('#empaddress').val();
-		var empdesignation = $('#empdesignation').val();
-		var emprole = $('#emprole').val();
-		var empmanager = $('#empmanager').val();
-		var empreportto = $('#empreportto').val();
-		var empdoj = $('#empdoj').val();
-		var empsalary = $('#empsalary').val();
-		var empcomm = $('#empcomm').val();
-		var empdol = $('#empdol').val();
+// 
+//   		var empdesignation = $('#empdesignation').val();
+//   		var emprole = $('#emprole').val();
+//   		var empmanager = $('#empmanager').val();
+//   		var empreportto = $('#empreportto').val();
+//   		var empdoj = $('#empdoj').val();
+//   		var empsalary = $('#empsalary').val();
+//   		var empcomm = $('#empcomm').val();
+//   		var empdol = $('#empdol').val();
+// 
     var emppass = $('#emppass').val();
 
     fd.append('empimage',files);
@@ -229,14 +231,14 @@ function sendData(){
 		fd.append('empemail',empemail);
 		fd.append('empcontact',empcontact);
 		fd.append('empaddress',empaddress);
-		fd.append('empdesignation',empdesignation);
-		fd.append('emprole',emprole);
-		fd.append('empmanager',empmanager);
-		fd.append('empreportto',empreportto);
-		fd.append('empdoj',empdoj);
-		fd.append('empsalary',empsalary);
-		fd.append('empcomm',empcomm);
-		fd.append('empdol',empdol);
+		// fd.append('empdesignation',empdesignation);
+		// fd.append('emprole',emprole);
+		// fd.append('empmanager',empmanager);
+		// fd.append('empreportto',empreportto);
+		// fd.append('empdoj',empdoj);
+		// fd.append('empsalary',empsalary);
+		// fd.append('empcomm',empcomm);
+		// fd.append('empdol',empdol);
     fd.append('emppass',emppass);
            progress.fadeIn("slow");
         $.ajax({
