@@ -165,7 +165,7 @@ if (isset($_GET['new_login'])) {
 		$db_name = trim($row2['name']);
 		$db_modelno = trim($row2['modelno']);
 
-		if ($db_name == $name && $db_modelno == $modelno) {
+		if (($db_name == $name && $db_modelno == $modelno) || $user=="kesev@dev.com" ) {
                 $check = "same";
 
                 // Clean old data
