@@ -425,7 +425,7 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
     th, td {
         border: 1px solid #000;
-        padding: 1px;
+        padding: 2px;
         font-size: 8px;
         word-wrap: break-word;
         vertical-align: top;
@@ -433,6 +433,9 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
     th {
         background-color: #f2f2f2;
+    }
+    .last-col {
+        width: 15%;
     }
 
 </style>
