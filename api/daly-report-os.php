@@ -390,7 +390,7 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
             <td>{$orderValues}</td>
 
-            <td></td>
+            <td class='last-col' ></td>
 
         </tr>
         ";
@@ -425,7 +425,7 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
     th, td {
         border: 1px solid #000;
-        padding: 3px;
+        padding: 1px;
         font-size: 8px;
         word-wrap: break-word;
         vertical-align: top;
@@ -465,7 +465,7 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
             <th>Not Visited</th>
             <th>Productive %</th>
             <th>Total Order Value</th>
-            <th>Distributors</th>
+            <th class='last-col' >Distributors</th>
         </tr>
 
         {$rows}
@@ -494,7 +494,7 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
                 number_format($grandTotalOrderValue, 2) .
             "</th>
 
-            <th></th>
+            <th class='last-col' ></th>
 
         </tr>
 
