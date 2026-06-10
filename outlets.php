@@ -625,7 +625,7 @@ function loaddataduplicate()
 		
 		$mt=$("#mt");$gt=$("#gt");$mtl=$("#mtl");
 		$milkbooth=$("#milkbooth");$total=$("#total");
-    wholesaler=$("#wholesaler");
+    $wholesaler=$("#wholesaler");
 		var progress=$("#progress");
 		 progress.fadeIn("slow");
 		 
