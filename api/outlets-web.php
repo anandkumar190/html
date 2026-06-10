@@ -253,7 +253,7 @@ if(isset($_GET['feedback']))
 	   $res=mysqli_query($con,"select o.id,o.state,cities.city As city,o.locality,o.distributorid,o.name,o.address,o.lastvisitpic,o.contactperson,o.contact,o.pincode,o.gstnumber,o.outlettype,o.outletsubtype,o.routeid,o.latitude,o.longitude,o.areaid,o.lastvisit,o.creationdate,o.createdby,concat(d.name,' - ',d.empid) as 'distributor',concat(s.name,'-',s.empid) as 'stockist',s.id as 'stockistid', concat(e.name,'-',e.empid)as 'so',a.area,a.region from outlets o join employees d on d.id=o.distributorid join employees s on s.id=d.stockistid join employees e on e.id=o.createdby join area a on a.id=o.areaid order by o.id desc") or die(mysqli_error($con));   
 	   $response=array();
 	   $num=mysqli_field_count($con);
-	   $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0;
+	   $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0;$wholesaler=0;
 	   while($row=mysqli_fetch_array($res))
 	   {
 		   $rr=array();
@@ -300,6 +300,13 @@ if(isset($_GET['feedback']))
 		   {
 			   $mtl++;
 		   }
+		
+
+			if($row["outlettype"]=="Wholesaler")
+		   {
+			   $wholesaler++;
+		   }
+
 		   
 		   $total++;
 		   
@@ -307,6 +314,7 @@ if(isset($_GET['feedback']))
 	       $rr["gt"]=$gt;
 	       $rr["mtl"]=$mtl;
 	       $rr["milkbooth"]=$milkbooth;
+		   $rr["wholesaler"]=$wholesaler;
 	       $rr["total"]=$total;
 	        array_push($response,$rr);
 	   } 
@@ -401,7 +409,7 @@ if (!$result) {
 }
 
 $response = array();
- $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0;
+ $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0; $wholesaler=0;
 while ($row = mysqli_fetch_array($result)) {
     $rr = array();
     $rr["id"] = $row["id"];
@@ -437,6 +445,14 @@ while ($row = mysqli_fetch_array($result)) {
 		   {
 			   $mtl++;
 		   }
+
+			if($row["outlettype"]=="Wholesaler")
+		   {
+			   $wholesaler++;
+		   }
+
+
+
 		   
 		   $total++;
 		   
@@ -444,6 +460,7 @@ while ($row = mysqli_fetch_array($result)) {
 	       $rr["gt"]=$gt;
 	       $rr["mtl"]=$mtl;
 	       $rr["milkbooth"]=$milkbooth;
+	       $rr["wholesaler"]=$wholesaler;
 	       $rr["total"]=$total;
 	
     
@@ -462,7 +479,7 @@ while ($row = mysqli_fetch_array($result)) {
 	   $res=mysqli_query($con,"select o.id,o.state,cities.city As city,o.locality,o.distributorid,o.name,o.address,o.lastvisitpic,o.contactperson,o.contact,o.pincode,o.gstnumber,o.outlettype,o.outletsubtype,o.routeid,o.latitude,o.longitude,o.areaid,o.lastvisit,o.creationdate,o.createdby,concat(d.name,' - ',d.empid) as 'distributor',concat(s.name,'-',s.empid) as 'stockist',s.id as 'stockistid', concat(e.name,'-',e.empid)as 'so',a.area,a.region from outlets o join employees d on d.id=o.distributorid join employees s on s.id=d.stockistid join employees e on e.id=o.createdby join area a on a.id=o.areaid join (select name,contact,address,count(*) from outlets group by name,contact,address having count(*)>1) ob on o.name=ob.name and o.contact=ob.contact order by o.id desc") or die(mysqli_error($con));   
 	   $response=array();
 	   $num=mysqli_field_count($con);
-	   $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0;
+	   $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0; $wholesaler=0;
 	   while($row=mysqli_fetch_array($res))
 	   {
 		   $rr=array();
@@ -505,6 +522,12 @@ while ($row = mysqli_fetch_array($result)) {
 		   {
 			   $milkbooth++;
 		   }
+
+		   	if($row["outlettype"]=="Wholesaler")
+		   {
+			   $wholesaler++;
+		   }
+
 		   if($row["outlettype"]=="MTL")
 		   {
 			   $mtl++;
@@ -516,6 +539,7 @@ while ($row = mysqli_fetch_array($result)) {
 	       $rr["gt"]=$gt;
 	       $rr["mtl"]=$mtl;
 	       $rr["milkbooth"]=$milkbooth;
+	       $rr["wholesaler"]=$wholesaler;
 	       $rr["total"]=$total;
 	        array_push($response,$rr);
 	   } 
@@ -619,6 +643,7 @@ if(isset($_GET['search']))
 	   $response=array();
 	   $num=mysqli_field_count($con);
 	   $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0;
+	   $wholesaler=0;
 	   while($row=mysqli_fetch_array($res))
 	   {
 		$currentDateTime = date('Y-m-d H:i:s');
@@ -692,6 +717,9 @@ if(isset($_GET['search']))
 		   {
 			   $milkbooth++;
 		   }
+		   if($row["outlettype"]=="Wholesaler"){
+			 $wholesaler++;
+		   }
 		   if($row["outlettype"]=="MTL")
 		   {
 			   $mtl++;
@@ -703,6 +731,7 @@ if(isset($_GET['search']))
 	       $rr["gt"]=$gt;
 	       $rr["mtl"]=$mtl;
 	       $rr["milkbooth"]=$milkbooth;
+		   $rr["wholesaler"]=$wholesaler;
 	       $rr["total"]=$total;
 		     
 		   array_push($response,$rr);

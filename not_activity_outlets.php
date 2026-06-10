@@ -161,6 +161,8 @@ $outlets=array();
                                           <span id="mtl" class="panel-title txt-dark"></span>
                                           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                           <span id="milkbooth" class="panel-title txt-dark"></span>
+                                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                          <span id="wholesaler" class="panel-title txt-dark"></span>
                                           
                     </div>
                     		<div class="clearfix"></div>
@@ -262,7 +264,7 @@ function searchdata()
 		var distributor=$("#distributor").val();
 		var routeid='';
 		
-		$mt=$("#mt");$gt=$("#gt");$mtl=$("#mtl");
+		$mt=$("#mt");$gt=$("#gt");$mtl=$("#mtl"); $wholesaler=$("#wholesaler")
 		$milkbooth=$("#milkbooth");$total=$("#total");
 		var progress=$("#progress");
 		 progress.fadeIn("slow");
@@ -285,6 +287,7 @@ function searchdata()
 			   $gt.html("G.T. - "+data[data.length-1].gt);
 			   $mtl.html("MTL - "+data[data.length-1].mtl);
 			   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
+			   $wholesaler.html("Wholesaler- "+data[data.length-1].wholesaler);
 			   $total.html("Total Outlets - "+data[data.length-1].total);
 	           
 			    $("#userstable").dataTable(

@@ -100,7 +100,7 @@
   }
 
 
-  $outletType=["MTS","G.T.","MTL","Milk Both"];
+  $outletType=["MTS","G.T.","MTL","Milk Both","Wholesaler"];
 
 ?>
 

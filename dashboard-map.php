@@ -110,6 +110,9 @@
                                         <span id="mtl" class="panel-title txt-dark"></span>
                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                         <span id="milkbooth" class="panel-title txt-dark"></span>
+                                           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                        <span id="wholesaler" class="panel-title txt-dark"></span>
+                                        
                                          
 									</div>
 									</div>
@@ -134,7 +137,7 @@
     var area=$("#area").val();
 
 
-      let $mt=$("#mt"); let $gt=$("#gt"); let $mtl=$("#mtl");
+      let $mt=$("#mt"); let $gt=$("#gt"); let $mtl=$("#mtl"); let $wholesaler=$("#wholesaler");
 		   let  $milkbooth=$("#milkbooth"); let $total=$("#total");
 
 		$.ajax({
@@ -152,6 +155,8 @@
 			   $gt.html("G.T. - "+data[data.length-1].gt);
 			   $mtl.html("MTL - "+data[data.length-1].mtl);
 			   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
+			   $wholesaler.html("Wholesaler - "+data[data.length-1].wholesaler);
+         
 			   $total.html("Total Outlets - "+data[data.length-1].total);
 
 			 var latLng=[];

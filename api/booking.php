@@ -985,7 +985,7 @@ if ($start && $end) {
     $res = mysqli_query($con, $query) or die(mysqli_error($con));
 
     $response = [];
-    $total = $gt = $mt = $mtl = $milkbooth = 0;
+    $total = $gt = $mt = $mtl = $milkbooth = 0; $wholesaler=0;
 
     // Precompute rolling windows once
     $currentDateTime      = date('Y-m-d H:i:s');
@@ -1026,6 +1026,7 @@ if ($start && $end) {
         if ($row['outlettype'] === 'G.T.')       { $gt++; }
         if ($row['outlettype'] === 'Milk Booth') { $milkbooth++; }
         if ($row['outlettype'] === 'MTL')        { $mtl++; }
+        if ($row['outlettype'] === 'Wholesaler')        { $wholesaler++; }
 
         $total++;
 
@@ -1048,6 +1049,7 @@ if ($start && $end) {
             'gt'                  => $gt,
             'mtl'                 => $mtl,
             'milkbooth'           => $milkbooth,
+            'wholesaler'           => $wholesaler,
             'total'               => $total,
         ];
     }

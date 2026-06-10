@@ -151,7 +151,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				  $res=mysqli_query($con,"select distinct o.locality from outletactivity a join outlets o on a.outletid=o.id where a.userid='$empid' and a.activitydate='$reportdate' and a.visittype='0' order by a.id asc"); 
 				  $areas=array();
 				  $visitDetails=array();  
-				  $new=0;$old=0;$milkbooth=0;$gt=0;$mts=0;$mtl=0;$horeca=0;
+				  $new=0;$old=0;$milkbooth=0;$gt=0;$mts=0;$mtl=0;$horeca=0;$wholesaler=0;
 				  while($row=mysqli_fetch_array($res))
 				  {
 					$area=$row["locality"];
@@ -169,6 +169,10 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 						if($octype=="Milk Booth")
 						{
 							$milkbooth++;
+						}
+						if($octype=="Wholesaler")
+						{
+							$wholesaler++;
 						}
 						if($octype=="MTS" || $octype=="MT")
 						{
@@ -264,6 +268,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				  $totalgt+=$gt;
 				  $totalmts+=$mts;
 				  $totalmtl+=$mtl;
+				  $totalwholesaler+=$wholesaler;
 				  $totalhoreca+=$horeca;
 				  
 				$data.="<tr>"; 
@@ -368,6 +373,8 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				$data.="<td>";
 				$data.=$gt;
 				$data.="</td>";
+						
+			
 				
 				$data.="<td>";
 				$data.=$mts;
@@ -375,6 +382,10 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				
 				$data.="<td>";
 				$data.=$mtl;
+				$data.="</td>";
+				
+				$data.="<td>";
+				$data.=$wholesaler;
 				$data.="</td>";
 				
 				$data.="<td>";
@@ -404,7 +415,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 			  
 	    $data.="<tr>
 		          <th></th><th></th>
-		         <th>Averages</th><th>".date('H:i:s',$avgstarttime)."</th><th>".date('H:i:s',$avgendtime)."</th><th>".round(($totalhours/$workingday),2)." Hrs</th><th>".round(($totaldistance/$workingday),2)." Km</th><th colspan='2'> Total </th><th>".$totalold."</th><th>".$totalnew."</th><th>".($totalss+$totaldistributor)."</th><th>".$totalothervisit."</th><th>".($totalold+$totalnew+$totalss+$totaldistributor+$totalothervisit)."</th><th>".$totalmilkbooth."</th><th>".$totalgt."</th><th>".$totalmts."</th><th>".$totalmtl."</th><th>".$totalhoreca."</th>
+		         <th>Averages</th><th>".date('H:i:s',$avgstarttime)."</th><th>".date('H:i:s',$avgendtime)."</th><th>".round(($totalhours/$workingday),2)." Hrs</th><th>".round(($totaldistance/$workingday),2)." Km</th><th colspan='2'> Total </th><th>".$totalold."</th><th>".$totalnew."</th><th>".($totalss+$totaldistributor)."</th><th>".$totalothervisit."</th><th>".($totalold+$totalnew+$totalss+$totaldistributor+$totalothervisit)."</th><th>".$totalmilkbooth."</th><th>".$totalgt."</th><th>".$totalmts."</th>    <th>".$totalmtl."</th>   <th>".$totalwholesaler."</th>    <th>".$totalhoreca."</th>
 		       </tr>";		  
 		$data.="</table>";
 		

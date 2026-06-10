@@ -89,6 +89,7 @@
                     <option value="G.T.">G.T.</option>
                     <option value="MTL">MTL</option>
                     <option value="Milk Booth">Milk Booth</option>
+                    <option value="Wholesaler">Wholesaler</option>
                     
                   </select>
                  </div>
@@ -135,6 +136,8 @@
                                         <span id="mtl" class="panel-title txt-dark"></span>
                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                         <span id="milkbooth" class="panel-title txt-dark"></span>
+                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                        <span id="wholesaler" class="panel-title txt-dark"></span>
                                          
 									</div>
 									<div class="clearfix"></div>
@@ -436,6 +439,7 @@
 	{
 		$mt=$("#mt");$gt=$("#gt");$mtl=$("#mtl");
 		$milkbooth=$("#milkbooth");$total=$("#total");
+    $wholesaler=$("#wholesaler");
 		 var progress=$("#progress");
 		 progress.fadeIn("slow");
 		 
@@ -453,6 +457,8 @@
 			   $gt.html("G.T. - "+data[data.length-1].gt);
 			   $mtl.html("MTL - "+data[data.length-1].mtl);
 			   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
+			   $wholesaler.html("Wholesaler - "+data[data.length-1].wholesaler);
+
 			   $total.html("Total Outlets - "+data[data.length-1].total);
 	            $("#userstable").dataTable(
 				{
@@ -522,6 +528,7 @@ function loaddataduplicate()
 	{
 		$mt=$("#mt");$gt=$("#gt");$mtl=$("#mtl");
 		$milkbooth=$("#milkbooth");$total=$("#total");
+    $wholesaler=$("#wholesaler");
 		 var progress=$("#progress");
 		 progress.fadeIn("slow");
 		 
@@ -535,6 +542,7 @@ function loaddataduplicate()
 			   $mt.html("MTS - "+data[data.length-1].mt);
 			   $gt.html("G.T. - "+data[data.length-1].gt);
 			   $mtl.html("MTL - "+data[data.length-1].mtl);
+        $wholesaler.html("Wholesaler - "+data[data.length-1].wholesaler);
 			   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
 			   $total.html("Total Outlets - "+data[data.length-1].total);
 	            $("#userstable").dataTable(
@@ -617,6 +625,7 @@ function loaddataduplicate()
 		
 		$mt=$("#mt");$gt=$("#gt");$mtl=$("#mtl");
 		$milkbooth=$("#milkbooth");$total=$("#total");
+    wholesaler=$("#wholesaler");
 		var progress=$("#progress");
 		 progress.fadeIn("slow");
 		 
@@ -638,6 +647,7 @@ function loaddataduplicate()
 			   $gt.html("G.T. - "+data[data.length-1].gt);
 			   $mtl.html("MTL - "+data[data.length-1].mtl);
 			   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
+			   $wholesaler.html("Wholesaler - "+data[data.length-1].wholesaler);
 			   $total.html("Total Outlets - "+data[data.length-1].total);
 	           
 			    $("#userstable").dataTable(
