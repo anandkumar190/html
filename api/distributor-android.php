@@ -289,7 +289,7 @@
 	   //$lng=truncate_number($lng,0); 
 	 
 	 //$res=mysqli_query($con,"select e.id, e.name, e.address from  employees e where e.usertype='3' order by e.name asc ");
-	 $res=mysqli_query($con,"select e.id,e.name,e.address, round( ( 6371 * acos( least(1.0,  cos( radians($lat) ) * cos( radians(latitude) ) * cos( radians(longitude) - radians($lng) ) + sin( radians($lat) ) * sin( radians(latitude) ) ) ) ), 3) as distance from employees e where e.usertype='3' having distance <= 1 order by distance asc");
+	 $res=mysqli_query($con,"select e.id,e.name,e.address, round( ( 6371 * acos( least(1.0,  cos( radians($lat) ) * cos( radians(latitude) ) * cos( radians(longitude) - radians($lng) ) + sin( radians($lat) ) * sin( radians(latitude) ) ) ) ), 3) as distance from employees e where e.usertype='3' and  distance <= 1 order by distance asc");
 	 $response=array();
 	  
 	 while($row=mysqli_fetch_array($res))
