@@ -177,62 +177,135 @@
       
    if(isset($_GET['visitregister']))
    {
-   
-       
-	  extract($_POST);
-	   if (!empty($datetime)) {
-		 $datetime = $datetime;
-	  }else {
-		$datetime = date("Y-m-d H:i:s");
+	  $response = array();
+
+	  // Safely get all request parameters
+	  $id = isset($_POST['id']) ? $_POST['id'] : '';
+	  $name = isset($_POST['name']) ? $_POST['name'] : '';
+	  $contact = isset($_POST['contact']) ? $_POST['contact'] : '';
+	  $outlettype = isset($_POST['outlettype']) ? $_POST['outlettype'] : '';
+	  $userid = isset($_POST['userid']) ? $_POST['userid'] : '';
+	  $outletvisit = isset($_POST['outletvisit']) ? $_POST['outletvisit'] : '';
+	  $battery = isset($_POST['battery']) ? $_POST['battery'] : '';
+	  $latitude = isset($_POST['latitude']) ? $_POST['latitude'] : '';
+	  $longitude = isset($_POST['longitude']) ? $_POST['longitude'] : '';
+
+	  // Validation: Next visit can only be saved after 3 minutes (180 seconds)
+	  if (!empty($userid)) {
+		 $stmt_check = $con->prepare("SELECT activitydate, activitytime FROM outletactivity WHERE userid = ? ORDER BY id DESC LIMIT 1");
+		 if ($stmt_check) {
+			$stmt_check->bind_param("s", $userid);
+			$stmt_check->execute();
+			$res_check = $stmt_check->get_result();
+			if ($row_check = $res_check->fetch_assoc()) {
+			   $last_datetime_str = $row_check['activitydate'] . ' ' . $row_check['activitytime'];
+			   $last_timestamp = strtotime($last_datetime_str);
+			   $current_timestamp = time();
+			   $diff_seconds = $current_timestamp - $last_timestamp;
+			   if ($diff_seconds >= 0 && $diff_seconds < 180) { // 3 minutes = 180 seconds
+				  $remaining = 180 - $diff_seconds;
+				  $response["message"] = "waiting";
+				  $response["remaining"] = $remaining;
+				  echo json_encode($response);
+				  exit;
+			   }
+			}
+			$stmt_check->close();
+		 }
 	  }
-	  if(isset($_FILES['lastvisitpic']['name']))
-	  {
-	    $filename=$_FILES['lastvisitpic']['name'];
-	    $tmpname=$_FILES['lastvisitpic']['tmp_name'];
-	    $filename=$name.$contact.$filename.".jpg";
-	    $response=array();
-	    $folder="imgoutlets";	  
-	    $query="update  outlets set lastvisitpic='$filename',lastvisit='$datetime' where id='$id'";
-        if($outlettype=="2")
-	    { 		  
-	      $folder="imgusers";
-	      $query="update employees set image='$filename',lastlogin='$datetime' where id='$id' and usertype='2'";
-	    }
-	  
-	    if($outlettype=="3")
-	    {		  
-	      $folder="imgusers";
-	      $query="update employees set image='$filename',lastlogin='$datetime' where id='$id' and usertype='3'";
-	    }
-	  
-	    if($outlettype=="4")
-	    {		  
-	      $outlettype=="0";
-	    }      	  
-	    mysqli_query($con,$query)or die(mysqli_error($con));
-	    if(mysqli_affected_rows($con)>0)
-	    {
-           move_uploaded_file($tmpname,"../".$folder."/".$filename);		  
-	    }
+
+	  if (!empty($_POST['datetime'])) {
+		 $datetime = $_POST['datetime'];
 	  } else {
-	    $query="update  outlets set lastvisit='$datetime' where id='$id'";
-		mysqli_query($con,$query)or die(mysqli_error($con));
+		 $datetime = date("Y-m-d H:i:s");
+	  }
+
+	  $date = date("Y-m-d");
+	  $time = date("H:i:s");
+
+	  if ($outlettype == "4")
+	  {
+		 $outlettype = "0"; // Fixed comparison bug
+	  }
+
+	  $update_executed = false;
+
+	  if(isset($_FILES['lastvisitpic']['name']) && $_FILES['lastvisitpic']['name'] != '')
+	  {
+		 $original_filename = $_FILES['lastvisitpic']['name'];
+		 $tmpname = $_FILES['lastvisitpic']['tmp_name'];
+		 
+		 // Clean filename to prevent path traversal
+		 $clean_uploaded_filename = basename($original_filename);
+		 $filename = $name . $contact . $clean_uploaded_filename . ".jpg";
+		 
+		 $folder = "imgoutlets";	  
+
+		 if($outlettype == "2")
+		 { 		  
+			$folder = "imgusers";
+			$stmt = $con->prepare("UPDATE employees SET image = ?, lastlogin = ? WHERE id = ? AND usertype = '2'");
+			$stmt->bind_param("sss", $filename, $datetime, $id);
+		 }
+		 elseif($outlettype == "3")
+		 {		  
+			$folder = "imgusers";
+			$stmt = $con->prepare("UPDATE employees SET image = ?, lastlogin = ? WHERE id = ? AND usertype = '3'");
+			$stmt->bind_param("sss", $filename, $datetime, $id);
+		 }
+		 else
+		 {
+			$stmt = $con->prepare("UPDATE outlets SET lastvisitpic = ?, lastvisit = ? WHERE id = ?");
+			$stmt->bind_param("sss", $filename, $datetime, $id);
+		 }
+
+		 if ($stmt) {
+			if ($stmt->execute()) {
+			   move_uploaded_file($tmpname, "../" . $folder . "/" . $filename);
+			   $update_executed = true;
+			}
+			$stmt->close();
+		 }
+	  } 
+	  else 
+	  {
+		 $stmt = $con->prepare("UPDATE outlets SET lastvisit = ? WHERE id = ?");
+		 $stmt->bind_param("ss", $datetime, $id);
+		 if ($stmt) {
+			if ($stmt->execute()) {
+			   $update_executed = true;
+			}
+			$stmt->close();
+		 }
 	  }
 	  
-	  mysqli_query($con,"insert into outletactivity(userid,outletid,activitytype,battery,activitydate,activitytime,Latitude,Longitude,visittype) values('$userid','$id','$outletvisit','$battery%','$date','$time','$latitude','$longitude','$outlettype')")or die(mysqli_error($con));
-		if(mysqli_affected_rows($con)>0)
-		{ 
-		   $entryid=mysqli_insert_id($con);		  		  
-		    $response["message"]="success";
-			$response["entryid"]=$entryid;
-		}
-	    else
-	    {
-	        $query="update  outlets set lastvisit='$datetime' where id='$id'";   mysqli_query($con,$query)or die(mysqli_error($con));
-		   $response["message"]="error";
-	    }	   
-	    echo json_encode($response); 
- }
+	  $battery_val = $battery . "%";
+	  $stmt2 = $con->prepare("INSERT INTO outletactivity(userid, outletid, activitytype, battery, activitydate, activitytime, Latitude, Longitude, visittype) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+	  
+	  if ($stmt2) {
+		 $stmt2->bind_param("sssssssss", $userid, $id, $outletvisit, $battery_val, $date, $time, $latitude, $longitude, $outlettype);
+		 if ($stmt2->execute()) {
+			$entryid = $con->insert_id;
+			$response["message"] = "success";
+			$response["entryid"] = $entryid;
+		 }
+		 else {
+			// Fallback update as in the original code
+			$stmt_err = $con->prepare("UPDATE outlets SET lastvisit = ? WHERE id = ?");
+			if ($stmt_err) {
+			   $stmt_err->bind_param("ss", $datetime, $id);
+			   $stmt_err->execute();
+			   $stmt_err->close();
+			}
+			$response["message"] = "error";
+		 }
+		 $stmt2->close();
+	  } else {
+		 $response["message"] = "error";
+	  }
+
+	  echo json_encode($response); 
+   }
 
 
 if(isset($_GET['feedback']))
