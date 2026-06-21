@@ -3,6 +3,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    exit('Forbidden');
+}
+
+
 require __DIR__ . '/../vendor/autoload.php';
 require 'daly-report-os.php';
 require_once(__DIR__ . "/../connect.php");
