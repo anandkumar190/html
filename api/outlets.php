@@ -151,9 +151,24 @@
 
               // Move the uploaded file if applicable
               if ($filename !== "") {
-                  $upload_dir = "../imgoutlets/";
+                  $upload_dir = dirname(__DIR__) . "/imgoutlets/";
+                  
+                  // Ensure target directory exists and is writable
+                  if (!is_dir($upload_dir)) {
+                      if (!mkdir($upload_dir, 0755, true)) {
+                          throw new Exception("Upload directory does not exist and could not be created: " . $upload_dir);
+                      }
+                  }
+                  
+                  if (!is_writable($upload_dir)) {
+                      throw new Exception("Upload directory is not writable: " . $upload_dir);
+                  }
+
+                  // Perform the file move and capture PHP warnings if it fails
                   if (!move_uploaded_file($file_tmp, $upload_dir . $filename)) {
-                      throw new Exception("Failed to move uploaded file to target directory.");
+                      $err = error_get_last();
+                      $details = ($err && isset($err['message'])) ? " Details: " . $err['message'] : "";
+                      throw new Exception("Failed to move uploaded file to target directory." . $details);
                   }
               }
 
