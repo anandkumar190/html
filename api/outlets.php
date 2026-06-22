@@ -207,70 +207,154 @@
    
    if(isset($_GET['edit']))
    {
-	  
-	  extract($_POST);
-	  $filename=$_FILES['empimage']['name'];
-	  $tmpname=$_FILES['empimage']['tmp_name'];
-	  $filename=$name.$contact.$filename.".jpg";
-	  $response=array();
-	  
-	  $lat=truncate_number($latitude,3);
-	  $lng=truncate_number($longitude,3);
-	  
-	  
-	  
-	  mysqli_query($con,"update outlets set  name='$name',
-	  address='$address',
-	  lastvisitpic='$filename',
-	  contactperson='$contactperson',
-	  contact='$contact',
-	  pincode='$pincode',
-	  gstnumber='$gstnumber',
-	  outlettype='$outlettype',
-	  outletsubtype='$outletsubtype',
-	  distributorid='$distributorid',
-	  routeid='$areaId',
-	  areaid='$areaId',
-	  competitor_presense='0',
-	  street='$street',
-	  locality='$locality',
-	  city='$city',
-	  state='$state',
-	  latitude='$latitude',
-	  longitude='$longitude',
-	  lastvisit='$datetime',
-	  updated_at='$datetime',
-	  createdby='$createdby' where id='$id'");
-	  
-	  if(mysqli_affected_rows($con)>0)
-	  {
-		  $outletid=mysqli_insert_id($con);
-		  $descrip="Outlet $name , $address details updated by $username";
-		mysqli_query($con,"insert into log(description,creationdate,createdby) values('$descrip','$datetime','$username')")or die(mysqli_error($con));
-		
-// 		print_r($tmpname,"../imgoutlets/".$filename);
-// 			echo "tmpname==";
-// 		echo $tmpname;
-// 		echo "filename==";
-// 	    echo $filename;
-// 		$test =move_uploaded_file($tmpname,"../imgoutlets/".$filename);
-// 		echo $test;
-// 		die;
-		  if(move_uploaded_file($tmpname,"../imgoutlets/".$filename))
-		  {
-		    $response["message"]="success";
-		  }
-		  else
-	      {
-		   $response["message"]="image error ";
-	      }
-	  }
-	  else
-	  {
-		   $response["message"]=" no updated  error";
-	  }
-	   
-	    echo json_encode($response); 
+      $response = array();
+      try {
+          // 1. Safely retrieve and sanitize inputs instead of extract()
+          $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+          $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+          $address = isset($_POST['address']) ? trim($_POST['address']) : '';
+          $contactperson = isset($_POST['contactperson']) ? trim($_POST['contactperson']) : '';
+          $contact = isset($_POST['contact']) ? trim($_POST['contact']) : '';
+          $pincode = isset($_POST['pincode']) ? trim($_POST['pincode']) : '';
+          $gstnumber = isset($_POST['gstnumber']) ? trim($_POST['gstnumber']) : '';
+          $outlettype = isset($_POST['outlettype']) ? trim($_POST['outlettype']) : '';
+          $outletsubtype = isset($_POST['outletsubtype']) ? trim($_POST['outletsubtype']) : '';
+          $distributorid = isset($_POST['distributorid']) ? trim($_POST['distributorid']) : '';
+          $latitude = isset($_POST['latitude']) ? trim($_POST['latitude']) : '';
+          $longitude = isset($_POST['longitude']) ? trim($_POST['longitude']) : '';
+          $createdby = isset($_POST['createdby']) ? trim($_POST['createdby']) : '';
+          $username = isset($_POST['username']) ? trim($_POST['username']) : '';
+          
+          $areaId = isset($_POST['areaId']) ? trim($_POST['areaId']) : (isset($_POST['areaid']) ? trim($_POST['areaid']) : '');
+          $street = isset($_POST['street']) ? trim($_POST['street']) : '';
+          $locality = isset($_POST['locality']) ? trim($_POST['locality']) : '';
+          $city = isset($_POST['city']) ? trim($_POST['city']) : '';
+          $state = isset($_POST['state']) ? trim($_POST['state']) : '';
+
+          if ($id <= 0) {
+              throw new Exception("Invalid or missing outlet ID");
+          }
+
+          // 2. Handle File Upload Safely
+          $filename = "";
+          
+          if (isset($_FILES['empimage']['name']) && $_FILES['empimage']['name'] !== '') {
+              if ($_FILES['empimage']['error'] !== UPLOAD_ERR_OK) {
+                  throw new Exception("File upload failed with error code: " . $_FILES['empimage']['error']);
+              }
+              
+              $file_tmp = $_FILES['empimage']['tmp_name'];
+              $original_name = basename($_FILES['empimage']['name']);
+              $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+              
+              // Validate extension
+              $allowed_extensions = array("jpg", "jpeg", "png");
+              if (!in_array($ext, $allowed_extensions)) {
+                  throw new Exception("Invalid file type. Only JPG, JPEG, and PNG allowed.");
+              }
+
+              // Validate MIME type
+              $finfo = finfo_open(FILEINFO_MIME_TYPE);
+              $mime = finfo_file($finfo, $file_tmp);
+              finfo_close($finfo);
+              if (strpos($mime, 'image/') !== 0) {
+                  throw new Exception("Uploaded file is not a valid image MIME type.");
+              }
+
+              // Create a safe, unique filename
+              $safe_name_prefix = preg_replace("/[^a-zA-Z0-9]/", "", $name . $contact);
+              $filename = $safe_name_prefix . "_" . uniqid() . "." . $ext;
+          }
+
+          // 3. Update outlet using Prepared Statement (Conditional on image upload)
+          if ($filename !== "") {
+              $stmt_update = $con->prepare("
+                  UPDATE outlets SET 
+                      name = ?, address = ?, lastvisitpic = ?, contactperson = ?, contact = ?, 
+                      pincode = ?, gstnumber = ?, outlettype = ?, outletsubtype = ?, distributorid = ?, 
+                      routeid = ?, areaid = ?, competitor_presense = '0', street = ?, locality = ?, 
+                      city = ?, state = ?, latitude = ?, longitude = ?, lastvisit = ?, 
+                      updated_at = ?, createdby = ? 
+                  WHERE id = ?
+              ");
+              if (!$stmt_update) {
+                  throw new Exception("Prepare statement failed for update: " . $con->error);
+              }
+              $stmt_update->bind_param(
+                  "sssssssssssssssssssssi",
+                  $name, $address, $filename, $contactperson, $contact,
+                  $pincode, $gstnumber, $outlettype, $outletsubtype, $distributorid,
+                  $areaId, $areaId, $street, $locality,
+                  $city, $state, $latitude, $longitude, $datetime,
+                  $datetime, $createdby, $id
+              );
+          } else {
+              $stmt_update = $con->prepare("
+                  UPDATE outlets SET 
+                      name = ?, address = ?, contactperson = ?, contact = ?, 
+                      pincode = ?, gstnumber = ?, outlettype = ?, outletsubtype = ?, distributorid = ?, 
+                      routeid = ?, areaid = ?, competitor_presense = '0', street = ?, locality = ?, 
+                      city = ?, state = ?, latitude = ?, longitude = ?, lastvisit = ?, 
+                      updated_at = ?, createdby = ? 
+                  WHERE id = ?
+              ");
+              if (!$stmt_update) {
+                  throw new Exception("Prepare statement failed for update: " . $con->error);
+              }
+              $stmt_update->bind_param(
+                  "sssssssssssssssssssi",
+                  $name, $address, $contactperson, $contact,
+                  $pincode, $gstnumber, $outlettype, $outletsubtype, $distributorid,
+                  $areaId, $areaId, $street, $locality,
+                  $city, $state, $latitude, $longitude, $datetime,
+                  $datetime, $createdby, $id
+              );
+          }
+
+          if ($stmt_update->execute()) {
+              // 4. Log the action
+              $descrip = "Outlet $name , $address details updated by $username";
+              $stmt_log = $con->prepare("INSERT INTO log (description, creationdate, createdby) VALUES (?, ?, ?)");
+              if ($stmt_log) {
+                  $stmt_log->bind_param("sss", $descrip, $datetime, $username);
+                  $stmt_log->execute();
+                  $stmt_log->close();
+              }
+
+              // 5. Move the uploaded file if applicable
+              if ($filename !== "") {
+                  $upload_dir = dirname(__DIR__) . "/imgoutlets/";
+                  
+                  if (!is_dir($upload_dir)) {
+                      if (!mkdir($upload_dir, 0755, true)) {
+                          throw new Exception("Upload directory does not exist and could not be created: " . $upload_dir);
+                      }
+                  }
+                  
+                  if (!is_writable($upload_dir)) {
+                      throw new Exception("Upload directory is not writable: " . $upload_dir);
+                  }
+
+                  if (!move_uploaded_file($file_tmp, $upload_dir . $filename)) {
+                      $err = error_get_last();
+                      $details = ($err && isset($err['message'])) ? " Details: " . $err['message'] : "";
+                      throw new Exception("Failed to move uploaded file to target directory." . $details);
+                  }
+              }
+
+              $response["message"] = "success";
+          } else {
+              throw new Exception("Failed to execute update: " . $stmt_update->error);
+          }
+
+          $stmt_update->close();
+          echo json_encode($response);
+
+      } catch (Throwable $e) {
+          $response["message"] = "error";
+          $response["error_details"] = $e->getMessage();
+          echo json_encode($response);
+      }
    }
 
 
