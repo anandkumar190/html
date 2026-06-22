@@ -68,8 +68,42 @@
           
           $areaId = isset($_POST['areaId']) ? trim($_POST['areaId']) : (isset($_POST['areaid']) ? trim($_POST['areaid']) : '');
 
-          if (empty($name) || empty($contact)) {
-              throw new Exception("Missing required fields: name or contact");
+          if (empty($name)) {
+              throw new Exception("Missing required field: name");
+          }
+          if (empty($contact)) {
+              throw new Exception("Missing required field: contact");
+          }
+
+          // Data Validation
+          if ($latitude !== '') {
+              if (!is_numeric($latitude) || floatval($latitude) < -90 || floatval($latitude) > 90) {
+                  throw new Exception("Invalid latitude value. Must be a number between -90 and 90.");
+              }
+          }
+          if ($longitude !== '') {
+              if (!is_numeric($longitude) || floatval($longitude) < -180 || floatval($longitude) > 180) {
+                  throw new Exception("Invalid longitude value. Must be a number between -180 and 180.");
+              }
+          }
+          
+          $clean_contact = preg_replace('/[^0-9]/', '', $contact);
+          if (strlen($clean_contact) < 10 || strlen($clean_contact) > 15) {
+              throw new Exception("Invalid contact number. Must contain between 10 and 15 digits.");
+          }
+
+          if (!empty($pincode)) {
+              if (!preg_match("/^[0-9]{6}$/", $pincode)) {
+                  throw new Exception("Invalid pincode. Must be exactly 6 digits.");
+              }
+          }
+
+          if (!empty($gstnumber) && !in_array(strtoupper($gstnumber), ["NA", "N/A", "NONE"])) {
+              $gst_upper = strtoupper($gstnumber);
+              if (!preg_match("/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/", $gst_upper)) {
+                  throw new Exception("Invalid GST number format.");
+              }
+              $gstnumber = $gst_upper;
           }
 
           // 2. Prevent duplicate entries using Prepared Statement
@@ -219,20 +253,59 @@
           $gstnumber = isset($_POST['gstnumber']) ? trim($_POST['gstnumber']) : '';
           $outlettype = isset($_POST['outlettype']) ? trim($_POST['outlettype']) : '';
           $outletsubtype = isset($_POST['outletsubtype']) ? trim($_POST['outletsubtype']) : '';
-          $distributorid = isset($_POST['distributorid']) ? trim($_POST['distributorid']) : '';
+
           $latitude = isset($_POST['latitude']) ? trim($_POST['latitude']) : '';
           $longitude = isset($_POST['longitude']) ? trim($_POST['longitude']) : '';
           $createdby = isset($_POST['createdby']) ? trim($_POST['createdby']) : '';
           $username = isset($_POST['username']) ? trim($_POST['username']) : '';
           
           $areaId = isset($_POST['areaId']) ? trim($_POST['areaId']) : (isset($_POST['areaid']) ? trim($_POST['areaid']) : '');
-          $street = isset($_POST['street']) ? trim($_POST['street']) : '';
+                   $distributorid =$areaId;
+		  $street = isset($_POST['street']) ? trim($_POST['street']) : '';
           $locality = isset($_POST['locality']) ? trim($_POST['locality']) : '';
           $city = isset($_POST['city']) ? trim($_POST['city']) : '';
           $state = isset($_POST['state']) ? trim($_POST['state']) : '';
 
           if ($id <= 0) {
               throw new Exception("Invalid or missing outlet ID");
+          }
+
+          if (empty($name)) {
+              throw new Exception("Missing required field: name");
+          }
+          if (empty($contact)) {
+              throw new Exception("Missing required field: contact");
+          }
+
+          // Data Validation
+          if ($latitude !== '') {
+              if (!is_numeric($latitude) || floatval($latitude) < -90 || floatval($latitude) > 90) {
+                  throw new Exception("Invalid latitude value. Must be a number between -90 and 90.");
+              }
+          }
+          if ($longitude !== '') {
+              if (!is_numeric($longitude) || floatval($longitude) < -180 || floatval($longitude) > 180) {
+                  throw new Exception("Invalid longitude value. Must be a number between -180 and 180.");
+              }
+          }
+          
+          $clean_contact = preg_replace('/[^0-9]/', '', $contact);
+          if (strlen($clean_contact) < 10 || strlen($clean_contact) > 15) {
+              throw new Exception("Invalid contact number. Must contain between 10 and 15 digits.");
+          }
+
+          if (!empty($pincode)) {
+              if (!preg_match("/^[0-9]{6}$/", $pincode)) {
+                  throw new Exception("Invalid pincode. Must be exactly 6 digits.");
+              }
+          }
+
+          if (!empty($gstnumber) && !in_array(strtoupper($gstnumber), ["NA", "N/A", "NONE"])) {
+              $gst_upper = strtoupper($gstnumber);
+              if (!preg_match("/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/", $gst_upper)) {
+                  throw new Exception("Invalid GST number format.");
+              }
+              $gstnumber = $gst_upper;
           }
 
           // 2. Handle File Upload Safely
