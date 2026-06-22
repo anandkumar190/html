@@ -50,57 +50,144 @@
   
    if(isset($_GET['new']))
    {
-	  
-	  extract($_POST);
-	  $response=array();
-	  $res=mysqli_query($con,"select * from outlets where outlettype='$outlettype' and name='$name'  and contact='$contact'");
-	  if($row=mysqli_fetch_array($res)) 
-	   {
-		 $response["message"]="already";
-		 echo json_encode($response); 
-		 return;   
-	   }
-	  if(isset($_FILES['empimage']['name']))
-	  {
-	  $filename=$_FILES['empimage']['name'];
-	  $tmpname=$_FILES['empimage']['tmp_name'];
-	  $filename=$name.$contact.$filename.".jpg";
-	  }
-	  
-	  $lat=truncate_number($latitude,3);
-	  $lng=truncate_number($longitude,3);
+      $response = array();
+      try {
+          // 1. Safely retrieve and sanitize inputs instead of extract()
+          $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+          $address = isset($_POST['address']) ? trim($_POST['address']) : '';
+          $contactperson = isset($_POST['contactperson']) ? trim($_POST['contactperson']) : '';
+          $contact = isset($_POST['contact']) ? trim($_POST['contact']) : '';
+          $pincode = isset($_POST['pincode']) ? trim($_POST['pincode']) : '';
+          $gstnumber = isset($_POST['gstnumber']) ? trim($_POST['gstnumber']) : '';
+          $outlettype = isset($_POST['outlettype']) ? trim($_POST['outlettype']) : '';
+          $outletsubtype = isset($_POST['outletsubtype']) ? trim($_POST['outletsubtype']) : '';
+          $latitude = isset($_POST['latitude']) ? trim($_POST['latitude']) : '';
+          $longitude = isset($_POST['longitude']) ? trim($_POST['longitude']) : '';
+          $createdby = isset($_POST['createdby']) ? trim($_POST['createdby']) : '';
+          $battery = isset($_POST['battery']) ? trim($_POST['battery']) : '';
+          
+          $areaId = isset($_POST['areaId']) ? trim($_POST['areaId']) : (isset($_POST['areaid']) ? trim($_POST['areaid']) : '');
 
-	  mysqli_query($con,"insert into outlets(name,address,lastvisitpic,contactperson,contact,pincode,gstnumber,outlettype,outletsubtype,routeid,competitor_presense,street,locality,city,state,latitude,longitude,areaid,lastvisit,creationdate,createdby) values('$name','$address','$filename','$contactperson','$contact','$pincode','$gstnumber','$outlettype','$outletsubtype','$areaId','0','$street','$locality','$city','$state','$latitude','$longitude','$areaId','$datetime','$datetime','$createdby')");
-	  
-	  if(mysqli_affected_rows($con)>0)
-	  {
-		  $outletid=mysqli_insert_id($con);
-		$response["id"]=$outletid;
-		mysqli_query($con,"insert into outletactivity(userid,outletid,activitytype,battery,activitydate,activitytime,Latitude,Longitude) values('$createdby','$outletid','New Outlet Create','$battery%','$date','$time','$latitude','$longitude')")or die(mysqli_error($con));
-		  if(isset($_FILES['empimage']['name']))
-		  {
-		     if(move_uploaded_file($tmpname,"../imgoutlets/".$filename))
-		      {
-		         $response["message"]="success";
-			
-		      }
-		      else
-	          {
-		         $response["message"]="error";
-		  
-	          }
-		  }
-		  else
-		  {
-			  $response["message"]="success";  
-		  }
-	  }
-	  else
-	  {
-		   $response["message"]="error";
-	  }
-	   
-	    echo json_encode($response); 
+          if (empty($name) || empty($contact)) {
+              throw new Exception("Missing required fields: name or contact");
+          }
+
+          // 2. Prevent duplicate entries using Prepared Statement
+          $stmt = $con->prepare("SELECT id FROM outlets WHERE outlettype = ? AND name = ? AND contact = ?");
+          if (!$stmt) {
+              throw new Exception("Prepare statement failed for check duplicate: " . $con->error);
+          }
+          $stmt->bind_param("sss", $outlettype, $name, $contact);
+          if (!$stmt->execute()) {
+              throw new Exception("Execute failed for check duplicate: " . $stmt->error);
+          }
+          $res = $stmt->get_result();
+          if ($res->fetch_assoc()) {
+              $response["message"] = "already";
+              echo json_encode($response);
+              $stmt->close();
+              return;
+          }
+          $stmt->close();
+
+          // 3. Handle File Upload Safely
+          $filename = "";
+          
+          if (isset($_FILES['empimage']['name']) && $_FILES['empimage']['name'] !== '') {
+              if ($_FILES['empimage']['error'] !== UPLOAD_ERR_OK) {
+                  throw new Exception("File upload failed with error code: " . $_FILES['empimage']['error']);
+              }
+              
+              $file_tmp = $_FILES['empimage']['tmp_name'];
+              $original_name = basename($_FILES['empimage']['name']);
+              $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+              
+              // Validate extension
+              $allowed_extensions = array("jpg", "jpeg", "png");
+              if (!in_array($ext, $allowed_extensions)) {
+                  throw new Exception("Invalid file type. Only JPG, JPEG, and PNG allowed.");
+              }
+
+              // Validate MIME type to ensure it is actually an image (compatible with PHP 7.x and 8.x)
+              $finfo = finfo_open(FILEINFO_MIME_TYPE);
+              $mime = finfo_file($finfo, $file_tmp);
+              finfo_close($finfo);
+              if (strpos($mime, 'image/') !== 0) {
+                  throw new Exception("Uploaded file is not a valid image MIME type.");
+              }
+
+              // Create a safe, unique filename to prevent overwrites & traversal
+              $safe_name_prefix = preg_replace("/[^a-zA-Z0-9]/", "", $name . $contact);
+              $filename = $safe_name_prefix . "_" . uniqid() . "." . $ext;
+          }
+
+          // 4. Insert into Outlets using Prepared Statement
+          $stmt_insert = $con->prepare("
+              INSERT INTO outlets (
+                  name, address, lastvisitpic, contactperson, contact, pincode, gstnumber, 
+                  outlettype, outletsubtype, routeid, competitor_presense, street, locality, 
+                  city, state, latitude, longitude, areaid, lastvisit, creationdate, createdby
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ");
+          
+          if (!$stmt_insert) {
+              throw new Exception("Prepare statement failed for insert: " . $con->error);
+          }
+
+          $stmt_insert->bind_param(
+              "ssssssssssssssssssss",
+              $name, $address, $filename, $contactperson, $contact, $pincode, $gstnumber,
+              $outlettype, $outletsubtype, $areaId, $street, $locality,
+              $city, $state, $latitude, $longitude, $areaId, $datetime, $datetime, $createdby
+          );
+
+          if (!$stmt_insert->execute()) {
+              throw new Exception("Execute failed for insert: " . $stmt_insert->error);
+          }
+
+          if ($stmt_insert->affected_rows > 0) {
+              $outletid = $con->insert_id;
+              $response["id"] = $outletid;
+
+              // Move the uploaded file if applicable
+              if ($filename !== "") {
+                  $upload_dir = "../imgoutlets/";
+                  if (!move_uploaded_file($file_tmp, $upload_dir . $filename)) {
+                      throw new Exception("Failed to move uploaded file to target directory.");
+                  }
+              }
+
+              // 5. Insert activity log using Prepared Statement
+              $battery_val = $battery . "%";
+              $activity_type = "New Outlet Create";
+              
+              $stmt_activity = $con->prepare("
+                  INSERT INTO outletactivity (
+                      userid, outletid, activitytype, battery, activitydate, activitytime, Latitude, Longitude
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              ");
+              if (!$stmt_activity) {
+                  throw new Exception("Prepare statement failed for activity log: " . $con->error);
+              }
+              $stmt_activity->bind_param("sissssss", $createdby, $outletid, $activity_type, $battery_val, $date, $time, $latitude, $longitude);
+              if (!$stmt_activity->execute()) {
+                  throw new Exception("Execute failed for activity log: " . $stmt_activity->error);
+              }
+              $stmt_activity->close();
+
+              $response["message"] = "success";
+          } else {
+              throw new Exception("No rows inserted.");
+          }
+
+          $stmt_insert->close();
+          echo json_encode($response);
+
+      } catch (Throwable $e) {
+          $response["message"] = "error";
+          $response["error_details"] = $e->getMessage();
+          echo json_encode($response);
+      }
    }
    
    if(isset($_GET['edit']))
