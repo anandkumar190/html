@@ -748,7 +748,7 @@ if(isset($_GET['search']))
    
    if(isset($_GET['activityvisit']))
    {
-	   $ds = isset($_GET['ds']) ? trim($_GET['ds']) : '';
+	   $ds = isset($_GET['ds']) ? 3 : 1;
 	   $res = mysqli_query($con, "SELECT 
 				o.id,
 				o.name,
