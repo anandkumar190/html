@@ -182,79 +182,145 @@ if(isset($_GET['subcategorybyid'])){
 
 
 if(isset($_GET['orderproduct'])){
-   //$data=$_POST;
-    extract($_POST);
-    // $str=$_POST["name"];
-//     print_r($data);
-//      // $data=json_decode($data,true);
- // print_r($data);
-//$data = json_decode(file_get_contents('php://input'), true);
+    $response = array();
+    try {
+        // 1. Safely retrieve and sanitize inputs instead of extract()
+        $outlet_id = isset($_POST['outlet_id']) ? trim($_POST['outlet_id']) : '';
+        $user_id = isset($_POST['user_id']) ? trim($_POST['user_id']) : (isset($_POST['userid']) ? trim($_POST['userid']) : '');
+        $total_amount = isset($_POST['total_amount']) ? trim($_POST['total_amount']) : '';
+        $total_qty = isset($_POST['total_qty']) ? trim($_POST['total_qty']) : '';
 
- //print_r($data);
- 
- 
-// $data=json_encode($data,true);
-//echo $data;
-//echo json_encode(['msg' => 'Success!','data'=>$data]);
-   //die('testing');
+        $raw_category_id = isset($_POST['category_id']) ? trim($_POST['category_id']) : '';
+        $raw_subcategory_id = isset($_POST['subcategory_id']) ? trim($_POST['subcategory_id']) : '';
+        $raw_product_id = isset($_POST['product_id']) ? trim($_POST['product_id']) : '';
+        $raw_product_name = isset($_POST['product_name']) ? trim($_POST['product_name']) : '';
+        $raw_qty_no = isset($_POST['qty_no']) ? trim($_POST['qty_no']) : '';
+        $raw_new_price = isset($_POST['new_price']) ? trim($_POST['new_price']) : '';
+        $raw_product_wise_total_price = isset($_POST['product_wise_total_price']) ? trim($_POST['product_wise_total_price']) : '';
 
+        // 2. Perform validations
+        if (empty($outlet_id)) {
+            throw new Exception("Please Enter Outlet Id");
+        }
+        if (empty($user_id)) {
+            throw new Exception("Please Enter User Id");
+        }
+        if (empty($total_amount) || !is_numeric($total_amount)) {
+            throw new Exception("Please Enter a valid Total Amount");
+        }
+        if (empty($total_qty) || !is_numeric($total_qty)) {
+            throw new Exception("Please Enter a valid Total Qty");
+        }
+        if (empty($raw_product_id)) {
+            throw new Exception("Please Enter Product Id List");
+        }
 
+        // Parse CSV items
+        $category_ids = explode(",", $raw_category_id);
+        $subcategory_ids = explode(",", $raw_subcategory_id);
+        $product_ids = explode(",", $raw_product_id);
+        $product_names = explode(",", $raw_product_name);
+        $qty_nos = explode(",", $raw_qty_no);
+        $new_prices = explode(",", $raw_new_price);
+        $product_wise_total_prices = explode(",", $raw_product_wise_total_price);
 
-    $msg = 0;
+        $product_count = count($product_ids);
+        if ($product_count === 0 || empty($product_ids[0])) {
+            throw new Exception("No products specified in the order.");
+        }
 
-    if(@$outlet_id == " "){
-        echo json_encode(['msg' => 'Please Enter Outlet Id']);
-        $msg = 1 ;
-    }elseif(@$user_id == " "){
-        echo json_encode(['msg' => 'Please Enter User Id']);
-        $msg = 1 ;
-    // }elseif(@$offer_qty == " "){
-    //     echo json_encode(['msg' => 'Please Enter Offer Qty']);
-    //     $msg = 1 ;
-    }elseif(@$total_amount == " "){
-        echo json_encode(['msg' => 'Please Enter Total Amout']);
-        $msg = 1 ;
-    }elseif(@$total_qty == " "){
-        echo json_encode(['msg' => 'Please Enter Total Qty']);
-        $msg = 1 ;
-    }
+        // Verify list lengths match
+        if (count($category_ids) !== $product_count ||
+            count($subcategory_ids) !== $product_count ||
+            count($product_names) !== $product_count ||
+            count($qty_nos) !== $product_count ||
+            count($new_prices) !== $product_count ||
+            count($product_wise_total_prices) !== $product_count) {
+            throw new Exception("Order item parameters mismatch. Please verify that all item lists have the same number of elements.");
+        }
 
-    if($msg != 1){
-$offer_qty=0;
-        $result = mysqli_query($con, "insert into booking(outlet_id, user_id, offer_qty, total_amount, total_qty) values('$outlet_id', '$userid', '$offer_qty', '$total_amount', '$total_qty') ");
+        // 3. Prevent Duplicate Booking (within last 2 minutes for same outlet, user, amount, and qty)
+        $stmt_check = $con->prepare("
+            SELECT id FROM booking 
+            WHERE outlet_id = ? 
+              AND user_id = ? 
+              AND total_amount = ? 
+              AND total_qty = ? 
+              AND booking_time >= NOW() - INTERVAL 5 MINUTE 
+            LIMIT 1
+        ");
+        if (!$stmt_check) {
+            throw new Exception("Prepare statement failed for duplicate check: " . $con->error);
+        }
+        $stmt_check->bind_param("ssdd", $outlet_id, $user_id, $total_amount, $total_qty);
+        if (!$stmt_check->execute()) {
+            throw new Exception("Execute failed for duplicate check: " . $stmt_check->error);
+        }
+        $res_check = $stmt_check->get_result();
+        if ($res_check->fetch_assoc()) {
+            $stmt_check->close();
+            throw new Exception("Duplicate booking detected. An identical booking was already submitted for this outlet in the last 2 minutes.");
+        }
+        $stmt_check->close();
 
-        $last_id = mysqli_insert_id($con);
-        
-        if ($last_id !="") {
-            
-        $category_id=explode(",",$category_id);
-        $subcategory_id=explode(",",$subcategory_id);
-        $product_id=explode(",",$product_id);
-        $product_name=explode(",",$product_name);
-        $qty_no=explode(",",$qty_no);
-        $new_price=explode(",",$new_price);
-        $product_wise_total_price=explode(",",$product_wise_total_price);
-       
-            
-            // print_r($nameValuePairs);
-            // die;
+        // 4. Begin Transaction
+        $con->begin_transaction();
 
-            for($i=0;$i<count($product_id);$i++){
-                
-                //extract($value);
-                $result2 = mysqli_query($con, "insert into booking_item(booking_id_fk, category_id, subcategory_id, product_id, product_name, qty_no, new_price,total_price) values('$last_id', '$category_id[$i]', '$subcategory_id[$i]','$product_id[$i]','$product_name[$i]','$qty_no[$i]','$new_price[$i]','$product_wise_total_price[$i]')" );   
+        // 5. Insert into booking using Prepared Statement
+        $offer_qty = 0;
+        $stmt_booking = $con->prepare("INSERT INTO booking(outlet_id, user_id, offer_qty, total_amount, total_qty) VALUES (?, ?, ?, ?, ?)");
+        if (!$stmt_booking) {
+            throw new Exception("Prepare statement failed for booking insertion: " . $con->error);
+        }
+        $stmt_booking->bind_param("ssidd", $outlet_id, $user_id, $offer_qty, $total_amount, $total_qty);
+        if (!$stmt_booking->execute()) {
+            throw new Exception("Execute failed for booking insertion: " . $stmt_booking->error);
+        }
+        $booking_id = $stmt_booking->insert_id;
+        $stmt_booking->close();
+
+        if ($booking_id <= 0) {
+            throw new Exception("Failed to generate a valid booking ID");
+        }
+
+        // 6. Insert booking items using Prepared Statement
+        $stmt_item = $con->prepare("
+            INSERT INTO booking_item(
+                booking_id_fk, category_id, subcategory_id, product_id, product_name, qty_no, new_price, total_price
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        if (!$stmt_item) {
+            throw new Exception("Prepare statement failed for booking items: " . $con->error);
+        }
+
+        for ($i = 0; $i < $product_count; $i++) {
+            $cat_id = trim($category_ids[$i]);
+            $subcat_id = trim($subcategory_ids[$i]);
+            $prod_id = trim($product_ids[$i]);
+            $prod_name = trim($product_names[$i]);
+            $qty = trim($qty_nos[$i]);
+            $price = trim($new_prices[$i]);
+            $item_total = trim($product_wise_total_prices[$i]);
+
+            $stmt_item->bind_param("isssssdd", $booking_id, $cat_id, $subcat_id, $prod_id, $prod_name, $qty, $price, $item_total);
+            if (!$stmt_item->execute()) {
+                throw new Exception("Failed to insert booking item at index $i: " . $stmt_item->error);
             }
-            
-            echo json_encode(['msg' => 'Success']);
         }
-        else{
-            echo json_encode(['msg' => 'Something Went Wrong!']);
-        }
-    }else{
-        echo json_encode(['msg' => 'Please Send all Required Field']);
-    }
-  
+        $stmt_item->close();
 
+        // 7. Commit Transaction
+        $con->commit();
+
+        echo json_encode(['msg' => 'Success']);
+
+    } catch (Throwable $e) {
+        // Rollback transaction on failure
+        if (isset($con) && $con->ping()) {
+            $con->rollback();
+        }
+        echo json_encode(['msg' => $e->getMessage()]);
+    }
 }
 
 
