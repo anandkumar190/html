@@ -748,8 +748,8 @@ if(isset($_GET['search']))
    
    if(isset($_GET['activityvisit']))
    {
-	$usertype=!empty(trim($_GET["ds"]))?3:1;
-	$res = mysqli_query($con, "SELECT 
+	   $ds = isset($_GET['ds']) ? trim($_GET['ds']) : '';
+	   $res = mysqli_query($con, "SELECT 
 				o.id,
 				o.name,
 				o.address,
@@ -777,12 +777,11 @@ if(isset($_GET['search']))
 				END AS is_updated_today,
 				emp.name AS distributorname,
 				SUM(IFNULL(b.total_amount, 0)) AS total_booking_amount
-				FROM outletactivity a
+				FROM outletactivity a WHERE e.usertype= '$usertype'
 				JOIN (
-				SELECT MAX(id) AS id
+					SELECT MAX(id) AS id
 				FROM outletactivity
 				WHERE activitydate >= CURDATE() - INTERVAL 7 DAY
-				AND e.usertype= '$usertype'
 				GROUP BY outletid, activitydate, activitytime
 				) latest ON latest.id = a.id
 				JOIN outlets o ON a.outletid = o.id
@@ -794,6 +793,7 @@ if(isset($_GET['search']))
 				JOIN states ON states.id = cities.state_id
 				LEFT JOIN booking b 
 				ON b.outlet_id = o.id AND DATE(b.booking_time) = a.activitydate
+				$where_outer
 				GROUP BY o.id, a.activitydate, a.activitytime, a.id
 				ORDER BY a.id DESC");  
 	   $response=array();
