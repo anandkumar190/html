@@ -793,7 +793,6 @@ if(isset($_GET['search']))
 				JOIN states ON states.id = cities.state_id
 				LEFT JOIN booking b 
 				ON b.outlet_id = o.id AND DATE(b.booking_time) = a.activitydate
-				$where_outer
 				GROUP BY o.id, a.activitydate, a.activitytime, a.id
 				ORDER BY a.id DESC");  
 	   $response=array();
