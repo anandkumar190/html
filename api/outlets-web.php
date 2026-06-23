@@ -748,6 +748,7 @@ if(isset($_GET['search']))
    
    if(isset($_GET['activityvisit']))
    {
+	$usertype=!empty(trim($_GET["ds"]))?3:1;
 	$res = mysqli_query($con, "SELECT 
 				o.id,
 				o.name,
@@ -781,6 +782,7 @@ if(isset($_GET['search']))
 				SELECT MAX(id) AS id
 				FROM outletactivity
 				WHERE activitydate >= CURDATE() - INTERVAL 7 DAY
+				AND e.usertype= '$usertype'
 				GROUP BY outletid, activitydate, activitytime
 				) latest ON latest.id = a.id
 				JOIN outlets o ON a.outletid = o.id
