@@ -748,7 +748,7 @@ if(isset($_GET['search']))
    
    if(isset($_GET['activityvisit']))
    {
-	   $ds = isset($_GET['ds']) ? 3 : 1;
+	   $usertype  = isset($_GET['ds']) ? 3 : 1;
 	   $res = mysqli_query($con, "SELECT 
 				o.id,
 				o.name,
@@ -779,7 +779,7 @@ if(isset($_GET['search']))
 				SUM(IFNULL(b.total_amount, 0)) AS total_booking_amount
 				FROM outletactivity a WHERE e.usertype= '$usertype'
 				JOIN (
-					SELECT MAX(id) AS id
+				SELECT MAX(id) AS id
 				FROM outletactivity
 				WHERE activitydate >= CURDATE() - INTERVAL 7 DAY
 				GROUP BY outletid, activitydate, activitytime
