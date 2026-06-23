@@ -748,7 +748,9 @@ if(isset($_GET['search']))
    
    if(isset($_GET['activityvisit']))
    {
-	   $usertype  = isset($_GET['ds']) ? 3 : 1;
+	   $ds = isset($_GET['ds']) ? trim($_GET['ds']) : '';
+	   $usertype = ($ds === 'ds') ? '3' : '1';
+
 	   $res = mysqli_query($con, "SELECT 
 				o.id,
 				o.name,
@@ -777,12 +779,14 @@ if(isset($_GET['search']))
 				END AS is_updated_today,
 				emp.name AS distributorname,
 				SUM(IFNULL(b.total_amount, 0)) AS total_booking_amount
-				FROM outletactivity a WHERE e.usertype= '$usertype'
+				FROM outletactivity a
 				JOIN (
-				SELECT MAX(id) AS id
-				FROM outletactivity
-				WHERE activitydate >= CURDATE() - INTERVAL 7 DAY
-				GROUP BY outletid, activitydate, activitytime
+					SELECT MAX(a2.id) AS id
+					FROM outletactivity a2
+					JOIN employees e2 ON e2.id = a2.userid
+					WHERE a2.activitydate >= CURDATE() - INTERVAL 7 DAY
+					  AND e2.usertype = '$usertype'
+					GROUP BY a2.outletid, a2.activitydate, a2.activitytime
 				) latest ON latest.id = a.id
 				JOIN outlets o ON a.outletid = o.id
 				JOIN employees e ON e.id = a.userid
@@ -793,6 +797,7 @@ if(isset($_GET['search']))
 				JOIN states ON states.id = cities.state_id
 				LEFT JOIN booking b 
 				ON b.outlet_id = o.id AND DATE(b.booking_time) = a.activitydate
+				WHERE e.usertype = '$usertype'
 				GROUP BY o.id, a.activitydate, a.activitytime, a.id
 				ORDER BY a.id DESC");  
 	   $response=array();
@@ -839,8 +844,10 @@ if(isset($_GET['search']))
 
    if(isset($_GET['activityvisittoday']))
    {
-	   $today=date('Y-m-d');
-	   $res=mysqli_query($con,"select o.id,o.name,o.address,o.lastvisitpic,o.contactperson,o.contact,o.gstnumber,o.outlettype,a.activitytype,a.activitydate,a.activitytime,a.feedback,a.battery,a.rating,e.name as 'empname',e.empid from outletactivity a join outlets o on a.outletid=o.id join employees e  on e.id=a.userid where a.activitydate='$today' order by a.id desc");   
+	   $ds = isset($_GET['ds']) ? trim($_GET['ds']) : '';
+	   $usertype = ($ds === 'ds') ? '3' : '1';
+	   $today = date('Y-m-d');
+	   $res = mysqli_query($con, "select o.id,o.name,o.address,o.lastvisitpic,o.contactperson,o.contact,o.gstnumber,o.outlettype,a.activitytype,a.activitydate,a.activitytime,a.feedback,a.battery,a.rating,e.name as 'empname',e.empid from outletactivity a join outlets o on a.outletid=o.id join employees e  on e.id=a.userid where a.activitydate='$today' and e.usertype = '$usertype' order by a.id desc");   
 	   $response=array();
 	   $num=mysqli_field_count($con);
 	   while($row=mysqli_fetch_array($res))

@@ -228,8 +228,8 @@
           <ul class="treeview-menu">
             <li><a href="team-structure"><i class="fa fa-circle-o"></i> Team Structure</a></li>
             <li><a href="users"><i class="fa fa-circle-o"></i> Users</a></li>
-            <li><a href="activityvisit"><i class="fa fa-circle-o"></i> Activities-Os</a></li>
-            <li><a href="activityvisit-ds"><i class="fa fa-circle-o"></i> Activities-Ds</a></li>
+            <li><a href="activityvisit?ds=os"><i class="fa fa-circle-o"></i> Activities-Os</a></li>
+            <li><a href="activityvisit?ds=ds"><i class="fa fa-circle-o"></i> Activities-Ds</a></li>
             <!-- <li><a href="daily-report"><i class="fa fa-circle-o"></i>Team's Daily Report</a></li> -->
             
             <li><a href="monthly-attendance"><i class="fa fa-circle-o"></i>Team's Monthly Report</a></li>

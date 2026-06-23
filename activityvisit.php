@@ -264,9 +264,11 @@
 
 	function loaddata()
 	{
+		 var urlParams = new URLSearchParams(window.location.search);
+		 var ds = urlParams.get('ds') || '';
 		 
      $.ajax({
-		  url:"api/outlets-web.php?activityvisit",
+		  url:"api/outlets-web.php?activityvisit" + (ds ? "&ds=" + encodeURIComponent(ds) : ""),
 		  type:"POST",
 		  contentType:"application/json; charset=utf-8",
 		  success:function(data){
@@ -283,7 +285,7 @@
                     style:    'os',
                     selector: 'td:first-child'
                     },
-                   order: [[ 1, 'asc' ]],
+                    order: [[ 1, 'asc' ]],
 				   dom: 'Bfrtip',	
 				  sort:false,
 				  data:data,
@@ -333,8 +335,11 @@
 
 function loaddatatoday()
 	{
+		 var urlParams = new URLSearchParams(window.location.search);
+		 var ds = urlParams.get('ds') || '';
+
      $.ajax({
-		  url:"api/outlets-web.php?activityvisittoday",
+		  url:"api/outlets-web.php?activityvisittoday" + (ds ? "&ds=" + encodeURIComponent(ds) : ""),
 		  type:"POST",
 		  contentType:"application/json; charset=utf-8",
 		  success:function(data){
