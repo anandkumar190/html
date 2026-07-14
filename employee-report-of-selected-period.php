@@ -466,7 +466,6 @@ $dsVisitTimes=[];
 						}
 						$formattedTime = $v['time'] ? date('h:i A', strtotime($v['time'])) : 'N/A';
 						$dsVistedStatus .= "<strong>Distributor:</strong> " . htmlspecialchars($v['distributor_name'] ?? 'N/A') . "<br/>";
-						$dsVistedStatus .= "<strong>City:</strong> " . htmlspecialchars($v['city'] ?? 'N/A') . "<br/>";
 						$dsVistedStatus .= "<strong>Time:</strong> " . htmlspecialchars($formattedTime) . "<br/>";
 						$dsVistedStatus .= "<strong>Purpose:</strong> " . htmlspecialchars(($v['reason_type'] ?: '') . ($v['reason'] ? ' - ' . $v['reason'] : ''));
 					}
