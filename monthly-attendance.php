@@ -112,9 +112,9 @@
                         <div class="panel-wrapper collapse in">
                             <div class="panel-body">
                                 <div style="margin-bottom: 10px;">
-    <button class="btn btn-primary" onclick="printTable()">🖨️ Print Table</button>
-    <button class="btn btn-success" onclick="downloadCSV()">📥 Download CSV</button>
-  </div>
+                                  <button class="btn btn-primary" onclick="printTable()">🖨️ Print Table</button>
+                                  <button class="btn btn-success" onclick="downloadCSV()">📥 Download CSV</button>
+                                </div>
 
                               <div class="table-wrap" id="responseDiv">	
                               </div>

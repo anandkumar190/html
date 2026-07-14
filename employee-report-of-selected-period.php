@@ -78,6 +78,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 		
 	//    }
 $dsVisitList=[];
+$dsVisitTimes=[];
 
 
 
@@ -87,6 +88,8 @@ $dsVisitList=[];
 					MAX(area_id) AS area_id,
 					MAX(user_id) As user_id,
 					visit_date,
+					MIN(visit_time) AS min_visit_time,
+					MAX(visit_time) AS max_visit_time,
 					GROUP_CONCAT(CONCAT(reason_type, ' - ', reason) SEPARATOR ', ') AS visit_reasons
 					FROM distributor_visits
 					WHERE user_id = ?
@@ -103,6 +106,10 @@ $dsVisitList=[];
 
 			while ($dsVisit = $dsVisits->fetch_assoc()) {
 				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']] = $dsVisit['visit_reasons'];
+				$dsVisitTimes[$dsVisit['user_id']][$dsVisit['visit_date']] = [
+					'min' => $dsVisit['min_visit_time'],
+					'max' => $dsVisit['max_visit_time']
+				];
 			}
 
 		$employeeName = '';
@@ -186,10 +193,29 @@ $dsVisitList=[];
 			}
 
 			// Convert to timestamps
-			$starttimeStamp = strtotime($starttime);
-			$endtimeStamp = strtotime($endtime);
+			$starttimeStamp = $starttime ? strtotime($starttime) : 0;
+			$endtimeStamp = $endtime ? strtotime($endtime) : 0;
 
-			if ($starttimeStamp && $endtimeStamp) {
+			// Check for distributor visit times on this date
+			if (isset($dsVisitTimes[$employee][$selectdate])) {
+				$dsMin = $dsVisitTimes[$employee][$selectdate]['min'];
+				$dsMax = $dsVisitTimes[$employee][$selectdate]['max'];
+
+				if ($dsMin) {
+					$dsStart = strtotime("$selectdate $dsMin");
+					if ($starttimeStamp == 0 || $dsStart < $starttimeStamp) {
+						$starttimeStamp = $dsStart;
+					}
+				}
+				if ($dsMax) {
+					$dsEnd = strtotime("$selectdate $dsMax");
+					if ($endtimeStamp == 0 || $dsEnd > $endtimeStamp) {
+						$endtimeStamp = $dsEnd;
+					}
+				}
+			}
+
+			if ($starttimeStamp > 0 && $endtimeStamp > 0) {
 				$diffSeconds = abs($endtimeStamp - $starttimeStamp);
 				$hours       = floor($diffSeconds / 3600);
 				$minutes     = floor(($diffSeconds % 3600) / 60);
@@ -305,6 +331,9 @@ $dsVisitList=[];
 					$starttimearray[] = $starttimeStamp;
 					$workingday++;
 					$rowData .= date('h:i:s A', $starttimeStamp);
+				} elseif (isset($dsVisitList[$employee][$selectdate])) {
+					$workingday++;
+					$rowData .= "Distributor Visit";
 				} else {
 					if ($day != "Sunday") $leave++;
 					$rowData .= "Leave";
@@ -316,6 +345,8 @@ $dsVisitList=[];
 				if ($endtimeStamp > 0) {
 					$endtimearray[] = $endtimeStamp;
 					$rowData .= date('h:i:s A', $endtimeStamp);
+				} elseif (isset($dsVisitList[$employee][$selectdate])) {
+					$rowData .= "Distributor Visit";
 				} else {
 					$rowData .= "Leave";
 				}
