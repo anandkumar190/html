@@ -85,16 +85,18 @@ $dsVisitTimes=[];
 
 			$visit = $con->prepare("
 					SELECT 
-					MAX(area_id) AS area_id,
-					MAX(user_id) As user_id,
-					visit_date,
-					MIN(visit_time) AS min_visit_time,
-					MAX(visit_time) AS max_visit_time,
-					GROUP_CONCAT(CONCAT(reason_type, ' - ', reason) SEPARATOR ', ') AS visit_reasons
-					FROM distributor_visits
-					WHERE user_id = ?
-					AND visit_date BETWEEN ? AND ?
-					GROUP BY visit_date
+					dv.user_id,
+					dv.visit_date,
+					dv.visit_time,
+					dv.reason_type,
+					dv.reason,
+					e.name AS distributor_name,
+					e.city AS distributor_city
+					FROM distributor_visits dv
+					LEFT JOIN employees e ON dv.distributor_id = e.id
+					WHERE dv.user_id = ?
+					AND dv.visit_date BETWEEN ? AND ?
+					ORDER BY dv.visit_date ASC, dv.visit_time ASC
 			");
 
 			$visit->bind_param("iss", $employee, $start, $end);
@@ -105,11 +107,33 @@ $dsVisitTimes=[];
 
 
 			while ($dsVisit = $dsVisits->fetch_assoc()) {
-				$dsVisitList[$dsVisit['user_id']][$dsVisit['visit_date']] = $dsVisit['visit_reasons'];
-				$dsVisitTimes[$dsVisit['user_id']][$dsVisit['visit_date']] = [
-					'min' => $dsVisit['min_visit_time'],
-					'max' => $dsVisit['max_visit_time']
+				$vDate = $dsVisit['visit_date'];
+				$vTime = $dsVisit['visit_time'];
+				
+				$visitInfo = [
+					'distributor_name' => $dsVisit['distributor_name'],
+					'city' => $dsVisit['distributor_city'],
+					'time' => $vTime,
+					'reason_type' => $dsVisit['reason_type'],
+					'reason' => $dsVisit['reason']
 				];
+				
+				$dsVisitList[$employee][$vDate][] = $visitInfo;
+				
+				// Track min and max time for attendance/working hours
+				if (!isset($dsVisitTimes[$employee][$vDate])) {
+					$dsVisitTimes[$employee][$vDate] = [
+						'min' => $vTime,
+						'max' => $vTime
+					];
+				} else {
+					if ($vTime < $dsVisitTimes[$employee][$vDate]['min']) {
+						$dsVisitTimes[$employee][$vDate]['min'] = $vTime;
+					}
+					if ($vTime > $dsVisitTimes[$employee][$vDate]['max']) {
+						$dsVisitTimes[$employee][$vDate]['max'] = $vTime;
+					}
+				}
 			}
 
 		$employeeName = '';
@@ -433,9 +457,21 @@ $dsVisitTimes=[];
 					$totalProductivValueOrders+=$vv['total_value_orders'];
 				}
 				$rowData .= "</td>";
-				$dsVistedStatus = isset($dsVisitList[$employee][$selectdate])
-				? $dsVisitList[$employee][$selectdate]
-				: "";
+				$dsVistedStatus = "";
+				if (isset($dsVisitList[$employee][$selectdate])) {
+					$dsVistedStatus .= "<div style='font-size: 12px; line-height: 1.4; text-align: left;'>";
+					foreach ($dsVisitList[$employee][$selectdate] as $index => $v) {
+						if ($index > 0) {
+							$dsVistedStatus .= "<hr style='margin: 6px 0; border-color: #ddd;'/>";
+						}
+						$formattedTime = $v['time'] ? date('h:i A', strtotime($v['time'])) : 'N/A';
+						$dsVistedStatus .= "<strong>Distributor:</strong> " . htmlspecialchars($v['distributor_name'] ?? 'N/A') . "<br/>";
+						$dsVistedStatus .= "<strong>City:</strong> " . htmlspecialchars($v['city'] ?? 'N/A') . "<br/>";
+						$dsVistedStatus .= "<strong>Time:</strong> " . htmlspecialchars($formattedTime) . "<br/>";
+						$dsVistedStatus .= "<strong>Purpose:</strong> " . htmlspecialchars(($v['reason_type'] ?: '') . ($v['reason'] ? ' - ' . $v['reason'] : ''));
+					}
+					$dsVistedStatus .= "</div>";
+				}
 							
 				$rowData .= "<td>" .$dsVistedStatus. "</td>";
 				$rowData .= "</tr>";
