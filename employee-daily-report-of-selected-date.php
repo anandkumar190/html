@@ -56,6 +56,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 	   $reportdate=$_POST['reportdate'];
 	   
 	   $reportdate=date("Y-m-d",strtotime($reportdate));
+	   $day = date('l', strtotime($reportdate));
 	   $result=mysqli_query($con,"select e.id,e.name,e.empid,e.contact,d.name as 'designation' from employees e join designation d on e.designationid=d.id where e.usertype='1'");
 	   $name="";$contact="";$designation="";
 	   
@@ -120,17 +121,37 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				      $endtime=$row["activitytime"];  
 					}
 				  }
-				  //$res1=mysqli_query($con,"select * from outletactivity where userid='$employee' and activitydate='$selectdate' order by id desc limit 1");
-				 // if($row1=mysqli_fetch_array($res1))
-				 // {
-				//	$endtime=$row1["activitytime"];  
-				 // }
-				  
-                  $starttime = strtotime($starttime);
-                  $endtime = strtotime($endtime);
+
+				  $starttimeStamp = $starttime ? strtotime($starttime) : 0;
+				  $endtimeStamp = $endtime ? strtotime($endtime) : 0;
+
+				  // Query distributor_visits table for times
+				  $dsMinMaxQuery = mysqli_query($con, "
+				      SELECT MIN(visit_time) AS min_time, MAX(visit_time) AS max_time 
+				      FROM distributor_visits 
+				      WHERE user_id = '$empid' AND visit_date = '$reportdate'
+				  ");
+				  $dsMinMax = mysqli_fetch_assoc($dsMinMaxQuery);
+				  $dsMin = $dsMinMax['min_time'] ?? null;
+				  $dsMax = $dsMinMax['max_time'] ?? null;
+
+				  if ($dsMin) {
+				      $dsStart = strtotime("$reportdate $dsMin");
+				      if ($starttimeStamp == 0 || $dsStart < $starttimeStamp) {
+				          $starttimeStamp = $dsStart;
+				      }
+				  }
+				  if ($dsMax) {
+				      $dsEnd = strtotime("$reportdate $dsMax");
+				      if ($endtimeStamp == 0 || $dsEnd > $endtimeStamp) {
+				          $endtimeStamp = $dsEnd;
+				      }
+				  }
+
+				  $starttime = $starttimeStamp;
+				  $endtime = $endtimeStamp;
                   
-				  
-				  $workinghours = round(abs($starttime - $endtime) / 3600,2);
+				  $workinghours = ($starttime > 0 && $endtime > 0) ? round(abs($starttime - $endtime) / 3600,2) : 0;
                   $res1=mysqli_query($con,"select * from outletactivity where userid='$empid' and activitydate='$reportdate' order by id asc");          
 				  $distance=0;
 				  $prelat=0;
@@ -210,7 +231,7 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 					$area=$row["area"];
 					$areaid=$row["id"];
 					array_push($areas,$area);  
-					$res1=mysqli_query($con,"select e.name,o.visittype,o.activitytype from outletactivity o join employees e on o.outletid=e.id where o.userid='$empid' and o.activitydate='$reportdate' and (o.visittype='2' || o.visittype='3') and e.area='$areaid' order by id o.asc"); 
+					$res1=mysqli_query($con,"select e.name,o.visittype,o.activitytype from outletactivity o join employees e on o.outletid=e.id where o.userid='$empid' and o.activitydate='$reportdate' and (o.visittype='2' || o.visittype='3') and e.area='$areaid' order by o.id asc"); 
 					$visits="";
 					while($row1=mysqli_fetch_array($res1))
 					{
@@ -354,7 +375,43 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				$data.="</td>";
 				
 				$data.="<td>";
-				$data.=($stockist+$distributor);
+				$dsVisitsRes = mysqli_query($con, "
+					SELECT dv.visit_time, dv.reason_type, dv.reason, e.name AS distributor_name
+					FROM distributor_visits dv
+					LEFT JOIN employees e ON dv.distributor_id = e.id
+					WHERE dv.user_id = '$empid' AND dv.visit_date = '$reportdate'
+					ORDER BY dv.visit_time ASC
+				");
+				$dsDetails = "";
+				$dsCount = 0;
+				while ($dsVisitRow = mysqli_fetch_assoc($dsVisitsRes)) {
+					$dsCount++;
+					if ($dsDetails != "") {
+						$dsDetails .= "<hr style='margin: 4px 0; border-color: #ddd;'/>";
+					}
+					$formattedTime = $dsVisitRow['visit_time'] ? date('h:i A', strtotime($dsVisitRow['visit_time'])) : 'N/A';
+					$dsDetails .= "<strong>Distributor:</strong> " . htmlspecialchars($dsVisitRow['distributor_name'] ?? 'N/A') . "<br/>";
+					$dsDetails .= "<strong>Timing:</strong> " . htmlspecialchars($formattedTime) . "<br/>";
+					$dsDetails .= "<strong>Purpose:</strong> " . htmlspecialchars(($dsVisitRow['reason_type'] ?: '') . ($dsVisitRow['reason'] ? ' - ' . $dsVisitRow['reason'] : ''));
+				}
+
+				// Increment distributor visit count to keep totals accurate
+				$distributor += $dsCount;
+
+				$visitDistrSSContent = "";
+				if ($stockist > 0) {
+					$visitDistrSSContent .= "<strong>Stockist Visits:</strong> $stockist";
+				}
+				if ($dsCount > 0) {
+					if ($visitDistrSSContent != "") {
+						$visitDistrSSContent .= "<hr style='margin: 6px 0; border-color: #ddd;'/>";
+					}
+					$visitDistrSSContent .= $dsDetails;
+				}
+				if ($visitDistrSSContent == "") {
+					$visitDistrSSContent = "0";
+				}
+				$data.=$visitDistrSSContent;
 				$data.="</td>";
 				
 				
@@ -409,13 +466,15 @@ function distance($lat1, $lon1, $lat2, $lon2, $unit) {
 				  
 			  }
 			  
-			  $avgstarttime=($totalstime/count($starttimearray));
-			  $avgendtime=($totaletime/count($endtimearray));
+			  $avgstarttime = count($starttimearray) > 0 ? ($totalstime / count($starttimearray)) : 0;
+			  $avgendtime = count($endtimearray) > 0 ? ($totaletime / count($endtimearray)) : 0;
 			  
+			  $avgHoursLabel = $workingday > 0 ? round(($totalhours / $workingday), 2) . " Hrs" : "0 Hrs";
+			  $avgDistanceLabel = $workingday > 0 ? round(($totaldistance / $workingday), 2) . " Km" : "0 Km";
 			  
 	    $data.="<tr>
 		          <th></th><th></th>
-		         <th>Averages</th><th>".date('H:i:s',$avgstarttime)."</th><th>".date('H:i:s',$avgendtime)."</th><th>".round(($totalhours/$workingday),2)." Hrs</th><th>".round(($totaldistance/$workingday),2)." Km</th><th colspan='2'> Total </th><th>".$totalold."</th><th>".$totalnew."</th><th>".($totalss+$totaldistributor)."</th><th>".$totalothervisit."</th><th>".($totalold+$totalnew+$totalss+$totaldistributor+$totalothervisit)."</th><th>".$totalmilkbooth."</th><th>".$totalgt."</th><th>".$totalmts."</th>    <th>".$totalmtl."</th>   <th>".$totalwholesaler."</th>    <th>".$totalhoreca."</th>
+		         <th>Averages</th><th>".date('H:i:s',$avgstarttime)."</th><th>".date('H:i:s',$avgendtime)."</th><th>".$avgHoursLabel."</th><th>".$avgDistanceLabel."</th><th colspan='2'> Total </th><th>".$totalold."</th><th>".$totalnew."</th><th>".($totalss+$totaldistributor)."</th><th>".$totalothervisit."</th><th>".($totalold+$totalnew+$totalss+$totaldistributor+$totalothervisit)."</th><th>".$totalmilkbooth."</th><th>".$totalgt."</th><th>".$totalmts."</th>    <th>".$totalmtl."</th>   <th>".$totalwholesaler."</th>    <th>".$totalhoreca."</th>
 		       </tr>";		  
 		$data.="</table>";
 		

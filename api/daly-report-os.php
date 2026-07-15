@@ -207,6 +207,49 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
         }
 
         // -------------------------------------------------
+        // Fetch Distributor Visits
+        // -------------------------------------------------
+        $dsVisitsRes = $con->query("
+            SELECT dv.visit_time, dv.reason_type, dv.reason, e.name AS distributor_name
+            FROM distributor_visits dv
+            LEFT JOIN employees e ON dv.distributor_id = e.id
+            WHERE dv.user_id = {$employeeId} AND dv.visit_date = '{$reportDate}'
+            ORDER BY dv.visit_time ASC
+        ");
+
+        $dsDetails = "";
+        $dsMinTime = null;
+        $dsMaxTime = null;
+
+        if ($dsVisitsRes && $dsVisitsRes->num_rows > 0) {
+            $visitsArray = [];
+            while ($dsVisitRow = $dsVisitsRes->fetch_assoc()) {
+                $visitsArray[] = $dsVisitRow;
+                
+                $vTime = $dsVisitRow['visit_time'];
+                if ($vTime) {
+                    if ($dsMinTime === null || $vTime < $dsMinTime) {
+                        $dsMinTime = $vTime;
+                    }
+                    if ($dsMaxTime === null || $vTime > $dsMaxTime) {
+                        $dsMaxTime = $vTime;
+                    }
+                }
+            }
+
+            foreach ($visitsArray as $index => $v) {
+                if ($index > 0) {
+                    $dsDetails .= "<hr style='margin: 4px 0; border-color: #ddd;'/>";
+                }
+                $formattedTime = $v['visit_time'] ? date('h:i A', strtotime($v['visit_time'])) : 'N/A';
+                
+                $dsDetails .= "<strong>Distributor:</strong> " . htmlspecialchars($v['distributor_name'] ?? 'N/A') . "<br/>";
+                $dsDetails .= "<strong>Timing:</strong> " . htmlspecialchars($formattedTime) . "<br/>";
+                $dsDetails .= "<strong>Purpose:</strong> " . htmlspecialchars(($v['reason_type'] ?: '') . ($v['reason'] ? ' - ' . $v['reason'] : ''));
+            }
+        }
+
+        // -------------------------------------------------
         // Start / End Time
         // -------------------------------------------------
         $startTime = '';
@@ -214,25 +257,39 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
         $workingMinutes = 0;
 
+        $startStamp = 0;
+        $endStamp = 0;
+
         if (!empty($dayActivities)) {
+            $startTime = $dayActivities[0]['activitytime'];
+            $endTime = end($dayActivities)['activitytime'];
 
-            $startTime =
-                $dayActivities[0]['activitytime'];
+            $startStamp = $startTime ? strtotime("$reportDate $startTime") : 0;
+            $endStamp = $endTime ? strtotime("$reportDate $endTime") : 0;
+        }
 
-            $endTime =
-                end($dayActivities)['activitytime'];
-
-            $startStamp = strtotime($startTime);
-
-            $endStamp = strtotime($endTime);
-
-            if ($startStamp && $endStamp) {
-
-                $diff = abs($endStamp - $startStamp);
-
-                $workingMinutes =
-                    floor($diff / 60);
+        if ($dsMinTime) {
+            $dsStart = strtotime("$reportDate $dsMinTime");
+            if ($startStamp == 0 || $dsStart < $startStamp) {
+                $startStamp = $dsStart;
             }
+        }
+        if ($dsMaxTime) {
+            $dsEnd = strtotime("$reportDate $dsMaxTime");
+            if ($endStamp == 0 || $dsEnd > $endStamp) {
+                $endStamp = $dsEnd;
+            }
+        }
+
+        if ($startStamp > 0 && $endStamp > 0) {
+            $diff = abs($endStamp - $startStamp);
+            $workingMinutes = floor($diff / 60);
+            
+            $startTime = date('H:i:s', $startStamp);
+            $endTime = date('H:i:s', $endStamp);
+        } else {
+            $startTime = '';
+            $endTime = '';
         }
 
         // -------------------------------------------------
@@ -390,7 +447,7 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
 
             <td>{$orderValues}</td>
 
-            <td class='last-col' ></td>
+            <td class='last-col' >{$dsDetails}</td>
 
         </tr>
         ";
