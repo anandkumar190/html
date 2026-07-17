@@ -37,7 +37,7 @@
 		// $roleid=$row['roleid'];
 		// $managerid=$row['managerid'];
 		// $reportsto=$row['reportsto'];
-		// $image=$row['image'];
+		 $image=$row['image'];
 		// $doj=$row['doj'];
 		// $dol=$row['dol'];
 		// $salary=$row['salary'];
