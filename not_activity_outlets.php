@@ -256,8 +256,8 @@ $outlets=array();
 function searchdata()
 	{
 		var state=$("#state").val();
-		 
-    var reservation = $('#reservation').val();
+		var city=$("#city").val();
+		var reservation = $('#reservation').val();
 		var region=$("#region").val();
 		var area=$("#area").val();
 		// var so=$("#so").val();
@@ -270,7 +270,7 @@ function searchdata()
 		 progress.fadeIn("slow");
 		 
          $.ajax({
-		  url:"api/booking.php?notvist&h&state="+state+"&reservation="+reservation+"&region="+region+"&area="+area+"&distributor="+distributor+"&routeid="+routeid,
+		  url:"api/booking.php?notvist&h&state="+state+"&city="+city+"&reservation="+encodeURIComponent(reservation)+"&region="+region+"&area="+area+"&distributor="+distributor+"&routeid="+routeid,
 		  type:"POST",
 		  //&so="+so+
 		  contentType:"application/json; charset=utf-8",

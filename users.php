@@ -50,7 +50,7 @@
                 </div>
               </div>
             </div>
-            <!-- /.box-header -->
+             /.box-header -->
             <div class="box-body table-responsive no-padding">
               
               <!-- Row -->
@@ -453,7 +453,7 @@ function sendData(){
 		//fd.append('empmanager',empmanager);
 		//fd.append('empreportto',empreportto);
 		//fd.append('empdoj',empdoj);
-//		fd.append('empsalary',empsalary);
+//fd.append('empsalary',empsalary);
 	//	fd.append('empcomm',empcomm);
 		fd.append('emppass',emppass);
         progress.fadeIn("slow");
