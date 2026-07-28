@@ -86,10 +86,9 @@ function exportEmployeeReport(mysqli $con, bool $download = true): string {
     // Outlet Counts By Area
     // -------------------------------------------------
     $outletResult = $con->query("
-        SELECT
-            areaid,
-            COUNT(id) AS total_outlets
+        SELECT areaid, COUNT(id) AS total_outlets
         FROM outlets
+        WHERE creationdate < CURDATE()
         GROUP BY areaid
     ");
 
