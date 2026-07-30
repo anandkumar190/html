@@ -227,7 +227,7 @@ $dsVisitTimes=[];
 
 
 				if (!empty($dsMin)) {
-						$dsStart = strtotime($selectdate . ' ' . $dsMin);
+						$dsStart = strtotime($dsMin);
 
 						if ($dsStart !== false && ($starttimeStamp == 0 || $dsStart < $starttimeStamp)) {
 							$starttimeStamp = $dsStart;
@@ -235,7 +235,7 @@ $dsVisitTimes=[];
 					}
 
 					if (!empty($dsMax)) {
-						$dsEnd = strtotime($selectdate . ' ' . $dsMax);
+						$dsEnd = strtotime($dsMax);
 
 						if ($dsEnd !== false && ($endtimeStamp == 0 || $dsEnd > $endtimeStamp)) {
 							$endtimeStamp = $dsEnd;
