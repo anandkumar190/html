@@ -225,19 +225,22 @@ $dsVisitTimes=[];
 				$dsMin = $dsVisitTimes[$employee][$selectdate]['min'];
 				$dsMax = $dsVisitTimes[$employee][$selectdate]['max'];
 
-				if ($dsMin) {
-					$dsStart = strtotime("$selectdate $dsMin");
-					$dsStart = strtotime($selectdate . ' ' . $dsMin);
-					if ($starttimeStamp == 0 || $dsStart < $starttimeStamp) {
-						$starttimeStamp = $dsStart;
+
+				if (!empty($dsMin)) {
+						$dsStart = strtotime($selectdate . ' ' . $dsMin);
+
+						if ($dsStart !== false && ($starttimeStamp == 0 || $dsStart < $starttimeStamp)) {
+							$starttimeStamp = $dsStart;
+						}
 					}
-				}
-				if ($dsMax) {
-					$dsEnd = strtotime($selectdate.' '.$dsMax );
-					if ($endtimeStamp == 0 || $dsEnd > $endtimeStamp) {
-						$endtimeStamp = $dsEnd;
+
+					if (!empty($dsMax)) {
+						$dsEnd = strtotime($selectdate . ' ' . $dsMax);
+
+						if ($dsEnd !== false && ($endtimeStamp == 0 || $dsEnd > $endtimeStamp)) {
+							$endtimeStamp = $dsEnd;
+						}
 					}
-				}
 			}
 
 			if ($starttimeStamp > 0 && $endtimeStamp > 0) {
