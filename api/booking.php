@@ -1148,11 +1148,11 @@ if (isset($_GET['checktodayorder'])) {
         $end_time = $order_date . " 23:59:59";
 
         if (!empty($userid)) {
-            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND user_id = ? AND booking_time >= ? AND booking_time <= ? ORDER BY id DESC LIMIT 1");
+            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND user_id = ? AND booking_time >= ? AND booking_time < ? ORDER BY id DESC LIMIT 1");
             if (!$stmt) {
                 throw new Exception("Prepare statement failed: " . $con->error);
             }
-            $stmt->bind_param("iiss", $outlet_id, $userid, $start_time, $end_time);
+          $temp1stmt = $stmt->bind_param("iiss", $outlet_id, $userid, $start_time, $end_time);
         }
 
         if (!$stmt->execute()) {
@@ -1161,7 +1161,7 @@ if (isset($_GET['checktodayorder'])) {
 
         $res = $stmt->get_result();
 
-        echo json_encode(['visted_date'=>$visit_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST,'res'=>$res->fetch_assoc()]);
+        echo json_encode(['visted_date'=>$visit_date,'temp1stmt'=>$temp1stmt,'stmt'=>$stmt, 'post'=>$_POST,'res'=>$res->fetch_assoc()]);
 		die;
 
         if ($row = $res->fetch_assoc()) {
