@@ -93,21 +93,21 @@ $outlets=array();
                 <br>
                 <br>
                  
-          <!-- <div class="form-group">
-            <label>Outlet:</label>
+          <div class="form-group">
+            <!-- <label>Outlet:</label> -->
 
-            <div class="input-group">
-            <div class="input-group-addon">
-            <i class="fa fa-user"></i>
-            </div>
+            <!-- <div class="input-group"> -->
+            <!-- <div class="input-group-addon"> -->
+            <!-- <i class="fa fa-user"></i> -->
+            <!-- </div> -->
             <?php #$res=mysqli_query($con,"select * from outlets order by name"); ?>
-            <select  class="form-control pull-right " id="outlet" name="outlet">
-              <option value="">Select outlet</option>
+            <!-- <select  class="form-control pull-right " id="outlet" name="outlet"> -->
+              <!-- <option value="">Select outlet</option> -->
               <?php #while($row=mysqli_fetch_array($res)){?>
-              <option value="<?php# echo $row['id']?>"><?php # echo $row['name']?></option>
+              <!-- <option value="<?php# echo $row['id']?>"><?php # echo $row['name']?></option> -->
               <?php #}?>
-            </select>
-          </div> -->
+            <!-- </select> -->
+          </div>
           <!-- /.input group -->
           <div class="form-group"></div>
           </div>
@@ -192,7 +192,7 @@ $outlets=array();
                                 $subcat=mysqli_query($con,"select id,name from parduct_sub_cat where cat_id=".$catrow['id']."  "); 
                                 while($subcatrow=mysqli_fetch_array($subcat)){ 
 
-                             $res=mysqli_query($con,"select id,productid from skus  where scatid=".$subcatrow['id']." Order by prodective_cell  ");
+                             $res=mysqli_query($con,"select id,productid from skus  where scatid=".$subcatrow['id']." order by prodective_cell  ");
                               while($row=mysqli_fetch_array($res)){
                                 ?>
                                                         <th><?php echo $row['productid'];?></th>
@@ -301,7 +301,7 @@ $(document).ready(function() {
         	var employee = $('#employee').val();
           var employee_name = $('#employee option:selected').text();
         	var reservation = $('#reservation').val();
-        	var outlet = $('#outlet').val();
+        	var outlet = '';
         	var distibuter = $('#distibuter').val();
 
           

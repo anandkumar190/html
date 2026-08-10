@@ -440,7 +440,7 @@ if(isset($_GET['search'])){
                 while($subcatrow=mysqli_fetch_array($subcat)){   
                     $catTotal=0.00;
                     $tempQty=0;
-                    $res=mysqli_query($con,"select id,productid from skus where scatid=".$subcatrow['id']."  Order by prodective_cell "); 
+                    $res=mysqli_query($con,"select id,productid from skus where scatid=".$subcatrow['id']."  order by prodective_cell "); 
                     while($row=mysqli_fetch_array($res)){
 
                             $tempQty+=$tt[@$subcatrow['id'].$row['id']]=@$items['qty_no'][@$row['id']];
