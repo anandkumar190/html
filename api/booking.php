@@ -1152,7 +1152,7 @@ if (isset($_GET['checktodayorder'])) {
             if (!$stmt) {
                 throw new Exception("Prepare statement failed: " . $con->error);
             }
-            $stmt->bind_param("ssss", $outlet_id, $userid, $start_time, $end_time);
+            $stmt->bind_param("iiss", $outlet_id, $userid, $start_time, $end_time);
         }
 
         if (!$stmt->execute()) {
@@ -1172,7 +1172,7 @@ if (isset($_GET['checktodayorder'])) {
             if (!$stmt_items) {
                 throw new Exception("Prepare statement for items failed: " . $con->error);
             }
-            $stmt_items->bind_param("s", $order_id);
+            $stmt_items->bind_param("i", $order_id);
             $stmt_items->execute();
             $res_items = $stmt_items->get_result();
 
