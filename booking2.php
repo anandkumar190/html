@@ -90,8 +90,7 @@ $outlets=array();
                   </div>
                  <!-- /.input group -->
                 </div>
-                <br>
-                <br>
+                
                  
           <div class="form-group">
             <!-- <label>Outlet:</label> -->
@@ -109,8 +108,7 @@ $outlets=array();
             <!-- </select> -->
           </div>
           <!-- /.input group -->
-          <div class="form-group"></div>
-          </div>
+
                   <div class="form-group">
                   <label>Distibuter:</label>
 
@@ -121,7 +119,7 @@ $outlets=array();
                     <?php 
 					   $res=mysqli_query($con,"select id,name from employees where usertype='3' order by name ");
 					?>
-                    <select  class="form-control pull-right " id="distibuter" name="distibuter">
+                    <select  class="form-control" id="distibuter" name="distibuter">
                       <option value="">Select Distibuter</option>
                       <?php while($row=mysqli_fetch_array($res)){?>
                       <option value="<?php echo $row['id']?>"><?php echo $row['name']?></option>
