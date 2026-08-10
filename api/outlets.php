@@ -1067,9 +1067,8 @@ if (isset($_GET['checktodayvisit'])) {
         // Read form data directly from $_POST (with $_REQUEST fallback)
         $outlet_id = isset($_POST['outlet_id']) ? trim((string)$_POST['outlet_id']) : null;
         $userid = isset($_POST['userid']) ? trim((string)$_POST['userid']) : null;
-
         $visit_date = isset($_POST['visit_date']) ? trim((string)$_POST['visit_date']):null;
-
+ 		extract($_POST);
 
         // // Fallback to php://input if $_POST is empty
         // if (empty($outlet_id) || empty($userid)) {
@@ -1088,7 +1087,7 @@ if (isset($_GET['checktodayvisit'])) {
         //     }
         // }
 
-		echo json_encode(['visted_date'=>$visted_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
+		echo json_encode(['visted_date'=>$visit_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
 		die;
 
         if (empty($visit_date)) {
