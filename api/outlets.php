@@ -1086,7 +1086,7 @@ if (isset($_GET['checktodayvisit'])) {
             }
         }
 
-		echo json_decode(['visted_date'=>$visted_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
+		echo json_encode(['visted_date'=>$visted_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
 		die;
 
         if (empty($visit_date)) {
