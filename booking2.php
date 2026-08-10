@@ -93,27 +93,25 @@ $outlets=array();
                 <br>
                 <br>
                  
-                      <div class="form-group">
-                   <label>Outlet:</label>
+          <!-- <div class="form-group">
+            <label>Outlet:</label>
 
-                  <div class="input-group">
-                    <div class="input-group-addon">
-                      <i class="fa fa-user"></i>
-                    </div>
-                    <?php 
-					   $res=mysqli_query($con,"select * from outlets order by name");
-					?>
-                    <select  class="form-control pull-right " id="outlet" name="outlet">
-                      <option value="">Select outlet</option>
-                      <?php while($row=mysqli_fetch_array($res)){?>
-                      <option value="<?php echo $row['id']?>"><?php echo $row['name']?></option>
-					  <?php }?>
-                    </select>
-                  </div>
-                 <!-- /.input group -->
-                </div>
-                                      <div class="form-group">
-                   <label>Distibuter:</label>
+            <div class="input-group">
+            <div class="input-group-addon">
+            <i class="fa fa-user"></i>
+            </div>
+            <?php #$res=mysqli_query($con,"select * from outlets order by name"); ?>
+            <select  class="form-control pull-right " id="outlet" name="outlet">
+              <option value="">Select outlet</option>
+              <?php #while($row=mysqli_fetch_array($res)){?>
+              <option value="<?php# echo $row['id']?>"><?php # echo $row['name']?></option>
+              <?php #}?>
+            </select>
+          </div> -->
+          <!-- /.input group -->
+          </div>
+                  <div class="form-group">
+                  <label>Distibuter:</label>
 
                   <div class="input-group">
                     <div class="input-group-addon">
