@@ -1133,7 +1133,6 @@ if (isset($_GET['checktodayorder'])) {
         $visit_date = isset($visit_date) ? trim($visit_date):null;
  		
 
-	
         if (empty($order_date)) {
             $order_date = date("Y-m-d");
         } else {
@@ -1159,11 +1158,12 @@ if (isset($_GET['checktodayorder'])) {
             throw new Exception("Execute failed: " . $stmt->error);
         }
 
+       // $res = $stmt->get_result();
+
         $res = $stmt->get_result();
-
-        echo json_encode(['visted_date'=>$visit_date,'temp1stmt'=>$temp1stmt,'stmt'=>$stmt, 'post'=>$_POST,'res'=>$res->fetch_assoc()]);
-		die;
-
+        $booking = $res->fetch_assoc();
+         echo json_encode([ 'visit_date' => $visit_date, 'userId' => $userid, 'outletId' => $outlet_id, 'start_time' => $start_time, 'end_time' => $end_time, 'post' => $_POST, 'res' => $booking ]);
+          die;
         if ($row = $res->fetch_assoc()) {
             $order_id = (string)$row['id'];
             $total_amount = $row['total_amount'];
