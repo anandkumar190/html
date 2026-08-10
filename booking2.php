@@ -192,7 +192,7 @@ $outlets=array();
                                 $subcat=mysqli_query($con,"select id,name from parduct_sub_cat where cat_id=".$catrow['id']."  "); 
                                 while($subcatrow=mysqli_fetch_array($subcat)){ 
 
-                             $res=mysqli_query($con,"select id,productid from skus  where scatid=".$subcatrow['id']."");
+                             $res=mysqli_query($con,"select id,productid from skus  where scatid=".$subcatrow['id']." Order by prodective_cell  ");
                               while($row=mysqli_fetch_array($res)){
                                 ?>
                                                         <th><?php echo $row['productid'];?></th>
