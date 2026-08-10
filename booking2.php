@@ -132,9 +132,8 @@ $outlets=array();
                <!-- Date and time range -->
               
               <!-- Date range -->
+               <br>
                 <div class="form-group">
-                   <label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
-
                   <div class="input-group">
                     
                     <button type="button" id="btnsearch" name="btnsearch" value="btnsearch" class="btn btn-default form-control pull-right" >
