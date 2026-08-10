@@ -1153,12 +1153,6 @@ if (isset($_GET['checktodayorder'])) {
                 throw new Exception("Prepare statement failed: " . $con->error);
             }
             $stmt->bind_param("ssss", $outlet_id, $userid, $start_time, $end_time);
-        } else {
-            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND booking_time >= ? AND booking_time <= ? ORDER BY id DESC LIMIT 1");
-            if (!$stmt) {
-                throw new Exception("Prepare statement failed: " . $con->error);
-            }
-            $stmt->bind_param("sss", $outlet_id, $start_time, $end_time);
         }
 
         if (!$stmt->execute()) {
@@ -1167,7 +1161,7 @@ if (isset($_GET['checktodayorder'])) {
 
         $res = $stmt->get_result();
 
-        echo json_encode(['visted_date'=>$visit_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST,'res'=>$res]);
+        echo json_encode(['visted_date'=>$visit_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST,'res'=>$res->fetch_assoc()]);
 		die;
 
         if ($row = $res->fetch_assoc()) {
