@@ -1133,6 +1133,8 @@ if (isset($_GET['checktodayorder'])) {
         $visit_date = isset($visit_date) ? trim($visit_date):null;
  		
 
+		echo json_encode(['visted_date'=>$visit_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
+		die;
         if (empty($order_date)) {
             $order_date = date("Y-m-d");
         } else {
