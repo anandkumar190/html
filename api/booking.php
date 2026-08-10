@@ -1068,58 +1068,59 @@ if (isset($_GET['notvist'])) {
     ";
     $resSums = mysqli_query($con, $sumsQuery);
     $outletSums = [];
-    if ($resSums) {
-        while ($sRow = mysqli_fetch_assoc($resSums)) {
-            $sum30Val  = (float)($sRow['sum30'] ?? 0);
-            $sum180Val = (float)($sRow['sum180'] ?? 0);
-        $outletSums[$sRow['outlet_id']] = [
-                'sum30'  => round($sum30Val, 2),
-                'sum180' => ($sum180Val > 0) ? round($sum180Val / 6, 2) : 0,
+        if ($resSums) {
+            while ($sRow = mysqli_fetch_assoc($resSums)) {
+                $sum30Val  = (float)($sRow['sum30'] ?? 0);
+                $sum180Val = (float)($sRow['sum180'] ?? 0);
+            $outletSums[$sRow['outlet_id']] = [
+                    'sum30'  => round($sum30Val, 2),
+                    'sum180' => ($sum180Val > 0) ? round($sum180Val / 6, 2) : 0,
+                ];
+            }
+        $response = [];
+        $total = $gt = $mt = $mtl = $milkbooth = $wholesaler = 0;
+
+        while ($row = mysqli_fetch_assoc($res)) {
+            $outletId = $row['id'];
+            $outletSum30  = isset($outletSums[$outletId]) ? $outletSums[$outletId]['sum30'] : 0;
+            $outletSum180 = isset($outletSums[$outletId]) ? $outletSums[$outletId]['sum180'] : 0;
+
+            // Tally types
+            if ($row['outlettype'] === 'MTS')        { $mt++; }
+            if ($row['outlettype'] === 'G.T.')       { $gt++; }
+            if ($row['outlettype'] === 'Milk Booth') { $milkbooth++; }
+            if ($row['outlettype'] === 'MTL')        { $mtl++; }
+            if ($row['outlettype'] === 'Wholesaler') { $wholesaler++; }
+
+            $total++;
+
+            $response[] = [
+                'id'                  => $row['id'],
+                'state'               => $row['state'],
+                'city'                => $row['city'],
+                'region'              => $row['region'],
+                'routename'           => $row['area'],
+                'distributor'         => $row['distributor'],
+                'name'                => $row['name'],
+                'lastvisit'           => $row['lastvisit'],
+                'last_30_value'       => $outletSum30,
+                'past_order_per_month'=> $outletSum180,
+                'contactperson'       => $row['contactperson'],
+                'contact'             => $row['contact'],
+                'address'             => $row['address'],
+                'mt'                  => $mt,
+                'gt'                  => $gt,
+                'mtl'                 => $mtl,
+                'milkbooth'           => $milkbooth,
+                'wholesaler'          => $wholesaler,
+                'total'               => $total,
             ];
         }
-     $response = [];
-    $total = $gt = $mt = $mtl = $milkbooth = $wholesaler = 0;
 
-    while ($row = mysqli_fetch_assoc($res)) {
-        $outletId = $row['id'];
-        $outletSum30  = isset($outletSums[$outletId]) ? $outletSums[$outletId]['sum30'] : 0;
-        $outletSum180 = isset($outletSums[$outletId]) ? $outletSums[$outletId]['sum180'] : 0;
-
-        // Tally types
-        if ($row['outlettype'] === 'MTS')        { $mt++; }
-        if ($row['outlettype'] === 'G.T.')       { $gt++; }
-        if ($row['outlettype'] === 'Milk Booth') { $milkbooth++; }
-        if ($row['outlettype'] === 'MTL')        { $mtl++; }
-        if ($row['outlettype'] === 'Wholesaler') { $wholesaler++; }
-
-        $total++;
-
-        $response[] = [
-            'id'                  => $row['id'],
-            'state'               => $row['state'],
-            'city'                => $row['city'],
-            'region'              => $row['region'],
-            'routename'           => $row['area'],
-            'distributor'         => $row['distributor'],
-            'name'                => $row['name'],
-            'lastvisit'           => $row['lastvisit'],
-            'last_30_value'       => $outletSum30,
-            'past_order_per_month'=> $outletSum180,
-            'contactperson'       => $row['contactperson'],
-            'contact'             => $row['contact'],
-            'address'             => $row['address'],
-            'mt'                  => $mt,
-            'gt'                  => $gt,
-            'mtl'                 => $mtl,
-            'milkbooth'           => $milkbooth,
-            'wholesaler'          => $wholesaler,
-            'total'               => $total,
-        ];
-    }
-
-    echo json_encode($response);
-    return;
-}
+        echo json_encode($response);
+        return;
+     }
+}     
 
 if (isset($_GET['checktodayorder'])) {
     header('Content-Type: application/json');
