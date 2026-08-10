@@ -1128,7 +1128,7 @@ if (isset($_GET['checktodayorder'])) {
    extract($_POST);
     try {
         // Read form data directly from $_POST (with $_REQUEST fallback)
-         $outlet_id = isset($outlet_id) ? trim($outlet_id) : null;
+        $outlet_id = isset($outlet_id) ? trim($outlet_id) : null;
         $userid = isset($userid) ? trim($userid) : null;
         $visit_date = isset($visit_date) ? trim($visit_date):null;
  		
@@ -1166,6 +1166,9 @@ if (isset($_GET['checktodayorder'])) {
         }
 
         $res = $stmt->get_result();
+
+        echo json_encode(['visted_date'=>$visit_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST,'res'=>$res]);
+		die;
 
         if ($row = $res->fetch_assoc()) {
             $order_id = (string)$row['id'];
