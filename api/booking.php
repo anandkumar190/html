@@ -1172,7 +1172,6 @@ if (isset($_GET['checktodayorder'])) {
             $stmt_items->bind_param("i", $order_id);
             $stmt_items->execute();
             $res_items = $stmt_items->get_result();
-
             $product_ids = array();
             $product_names = array();
             $category_ids = array();
