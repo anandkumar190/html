@@ -108,8 +108,8 @@
                  </div>
       
                   <div class="input-group input-group-sm" style="width: 180px;">
-                 &nbsp;&nbsp;  <button type="button" id="btnsearch" class="form-control btn btn-default"><i class="fa fa-search"></i> Search</button>
-                 &nbsp;&nbsp;  <button type="button" id="btnreset" class="form-control btn btn-warning"><i class="fa fa-refresh"></i> Reset</button>
+                 &nbsp;&nbsp;  <button type="button" id="btnsearch" class="form-control btn btn-success" style="margin: 5px;" ><i class="fa fa-search"></i> Search</button>
+                 &nbsp;&nbsp;  <button type="button" id="btnreset" class="form-control btn btn-warning" style="margin: 5px;" ><i class="fa fa-refresh"></i> Reset</button>
                   </div>
 
                 </form>

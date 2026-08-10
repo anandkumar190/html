@@ -314,7 +314,7 @@
             <?php 
               $ref = isset($_GET['ref']) ? $_GET['ref'] : (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'outlets');
             ?>
-            <a href="<?php echo htmlspecialchars($ref); ?>" class="btn btn-danger"><span class="fa fa-remove"></span> Cancel </a>
+            <a href="<?php echo htmlspecialchars($ref); ?>" class="btn btn-danger"><span class="fa fa-remove"></span> Back </a>
                 <button type="submit"  id="btnaddproduct" class="btn btn-primary pull-right "><span class="fa fa-edit"></span> Update Details</button>
               </div>
             
