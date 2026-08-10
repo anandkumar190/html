@@ -1130,7 +1130,7 @@ if (isset($_GET['checktodayorder'])) {
         // Read form data directly from $_POST (with $_REQUEST fallback)
         $outlet_id = isset($outlet_id) ? trim($outlet_id) : null;
         $userid = isset($userid) ? trim($userid) : null;
-        $visit_date = isset($visit_date) ? trim($visit_date):null;
+        $order_date = isset($visit_date) ? trim($visit_date):null;
  		
 
         if (empty($order_date)) {
