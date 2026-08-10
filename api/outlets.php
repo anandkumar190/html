@@ -1062,13 +1062,13 @@ if(isset($_GET['sync']))
 if (isset($_GET['checktodayvisit'])) {
     header('Content-Type: application/json');
     $response = array();
-
+	extract($_POST);
     try {
         // Read form data directly from $_POST (with $_REQUEST fallback)
-        $outlet_id = isset($_POST['outlet_id']) ? trim((string)$_POST['outlet_id']) : null;
-        $userid = isset($_POST['userid']) ? trim((string)$_POST['userid']) : null;
-        $visit_date = isset($_POST['visit_date']) ? trim((string)$_POST['visit_date']):null;
- 		extract($_POST);
+        $outlet_id = isset($outlet_id) ? trim($outlet_id) : null;
+        $userid = isset($userid) ? trim($userid) : null;
+        $visit_date = isset($visit_date) ? trim($visit_date):null;
+ 		
 
         // // Fallback to php://input if $_POST is empty
         // if (empty($outlet_id) || empty($userid)) {
