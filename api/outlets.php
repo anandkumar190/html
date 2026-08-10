@@ -1086,6 +1086,9 @@ if (isset($_GET['checktodayvisit'])) {
             }
         }
 
+		echo json_decode(['visted_date'=>$visted_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
+		die;
+
         if (empty($visit_date)) {
             $visit_date = date("Y-m-d");
         } else {
