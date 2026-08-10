@@ -301,7 +301,8 @@
                return "<input type='hidden' id='select' value='"+value+"' />";
                }},{
 					   data:'id',render:function(value){
-						  return "<a href='editoutlet?editid="+value+"'><span class='fa fa-edit'></span></a>";
+						  var refUrl = encodeURIComponent((window.location.pathname + window.location.search).replace(/^\//, ''));
+						  return "<a href='editoutlet?editid="+value+"&ref="+refUrl+"'><span class='fa fa-edit'></span></a>";
 						  }},{data:'activitydate'},
                 {data:"activitytime"},
               {data:'empname'},
@@ -354,7 +355,8 @@ function loaddatatoday()
             ],
 				  columns:[{
 					   data:'id',render:function(value){
-						  return "<a href='editoutlet?editid="+value+"'><span class='fa fa-edit'></span></a>";
+						  var refUrl = encodeURIComponent((window.location.pathname + window.location.search).replace(/^\//, ''));
+						  return "<a href='editoutlet?editid="+value+"&ref="+refUrl+"'><span class='fa fa-edit'></span></a>";
 						  }},
 						  {
 							data:'name'

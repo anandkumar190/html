@@ -107,8 +107,9 @@
                           </select>
                  </div>
       
-                  <div class="input-group input-group-sm" style="width: 80px;">
+                  <div class="input-group input-group-sm" style="width: 180px;">
                  &nbsp;&nbsp;  <button type="button" id="btnsearch" class="form-control btn btn-default"><i class="fa fa-search"></i> Search</button>
+                 &nbsp;&nbsp;  <button type="button" id="btnreset" class="form-control btn btn-warning"><i class="fa fa-refresh"></i> Reset</button>
                   </div>
 
                 </form>
@@ -336,7 +337,7 @@
                               </select>
                             </div>
                     
-                    <div class="form-group">
+                          <div class="form-group">
                             <label>Date of Joining:</label>
 
                             <div class="input-group date">
@@ -576,7 +577,8 @@ function loaddataduplicate()
 						  }},
 				          {
 					   data:'id',render:function(value){
-						  return "<a href='editoutlet?editid="+value+"'><span class='fa fa-edit'></span></a>";
+						  var refUrl = encodeURIComponent((window.location.pathname + window.location.search).replace(/^\//, ''));
+						  return "<a href='editoutlet?editid="+value+"&ref="+refUrl+"'><span class='fa fa-edit'></span></a>";
 						  }},
 						  {
 							data:'state'
@@ -612,8 +614,82 @@ function loaddataduplicate()
 	}
 
 
-    function searchdata()
+    function saveFilterState()
+    {
+        var filterData = {
+            state: $("#state").val() || '',
+            city: $("#city").val() || '',
+            region: $("#region").val() || '',
+            area: $("#area").val() || '',
+            outletType: $("#outletType").val() || '',
+            distributor: $("#distributor").val() || '',
+            hasSearched: true
+        };
+        sessionStorage.setItem('outlet_search_filters', JSON.stringify(filterData));
+    }
+
+    function restoreFilterState()
+    {
+        var savedFilterStr = sessionStorage.getItem('outlet_search_filters');
+        if (!savedFilterStr) {
+            distributor();
+            return;
+        }
+
+        try {
+            var savedFilter = JSON.parse(savedFilterStr);
+            if (!savedFilter || !savedFilter.hasSearched) {
+                distributor();
+                return;
+            }
+
+            if (savedFilter.outletType) {
+                $("#outletType").val(savedFilter.outletType).trigger('change');
+            }
+
+            var distPromise = distributor();
+            if (savedFilter.distributor) {
+                distPromise.done(function() {
+                    $("#distributor").val(savedFilter.distributor).trigger('change');
+                });
+            }
+
+            if (savedFilter.state) {
+                $("#state").val(savedFilter.state).trigger('change');
+                city(savedFilter.state).done(function() {
+                    if (savedFilter.city) {
+                        $("#city").val(savedFilter.city).trigger('change');
+                        region(savedFilter.city).done(function() {
+                            if (savedFilter.region) {
+                                $("#region").val(savedFilter.region).trigger('change');
+                                area(savedFilter.region).done(function() {
+                                    if (savedFilter.area) {
+                                        $("#area").val(savedFilter.area).trigger('change');
+                                    }
+                                    searchdata(true);
+                                });
+                            } else {
+                                searchdata(true);
+                            }
+                        });
+                    } else {
+                        searchdata(true);
+                    }
+                });
+            } else {
+                searchdata(true);
+            }
+        } catch(e) {
+            console.error("Error restoring search filters:", e);
+            distributor();
+        }
+    }
+
+    function searchdata(isRestoring)
 	{
+		if (!isRestoring) {
+			saveFilterState();
+		}
 		var state=$("#state").val();
 		var city=$("#city").val();
 		var region=$("#region").val();
@@ -642,13 +718,14 @@ function loaddataduplicate()
 				   progress.fadeOut("slow");		   
 				   alert("No Records Found on Selected Search Pattern...");
 				   //return;
+			   } else {
+				   $mt.html("MTS - "+data[data.length-1].mt);
+				   $gt.html("G.T. - "+data[data.length-1].gt);
+				   $mtl.html("MTL - "+data[data.length-1].mtl);
+				   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
+				   $wholesaler.html("Wholesaler - "+data[data.length-1].wholesaler);
+				   $total.html("Total Outlets - "+data[data.length-1].total);
 			   }
-	           $mt.html("MTS - "+data[data.length-1].mt);
-			   $gt.html("G.T. - "+data[data.length-1].gt);
-			   $mtl.html("MTL - "+data[data.length-1].mtl);
-			   $milkbooth.html("Milk Booth - "+data[data.length-1].milkbooth);
-			   $wholesaler.html("Wholesaler - "+data[data.length-1].wholesaler);
-			   $total.html("Total Outlets - "+data[data.length-1].total);
 	           
 			    $("#userstable").dataTable(
 				{
@@ -680,7 +757,8 @@ function loaddataduplicate()
                         return "<input type='hidden' id='select' value='"+value+"' />";
                         }},{
                           data:'id',render:function(value){
-                          return "<a href='editoutlet?editid="+value+"'><span class='fa fa-edit'></span></a>";
+                          var refUrl = encodeURIComponent((window.location.pathname + window.location.search).replace(/^\//, ''));
+                          return "<a href='editoutlet?editid="+value+"&ref="+refUrl+"'><span class='fa fa-edit'></span></a>";
                           }},
                         {
                         data:'state'
@@ -725,28 +803,28 @@ function loaddataduplicate()
   function state()
 	  {
              //alert("Hello");
-             $.ajax({
+             return $.ajax({
 			 url:"api/outlets-web.php?getstate",
 			 type:"GET",			 
 			 contentType:"application/json; charset=utf-8",
 			 success: function(data){
 			 data=JSON.parse(data);
-			   var state=$("#state");
-			   state.empty();
+			   var stateSelect=$("#state");
+			   stateSelect.empty();
 			   var option=$("<option value='' >").html("Select State");
-			   state.append(option);
+			   stateSelect.append(option);
 			   $.each(data, function (i, user) {
                         //Create new option
                         option = $('<option value='+user.state+'>').html(user.name);
                         //append city states drop down
-                        state.append(option);
+                        stateSelect.append(option);
                     });
 			 }});
 	  }
 
     function city(state)
 	  {          
-      $.ajax({
+      return $.ajax({
 			 url:"api/outlets-web.php?getcity&state="+state,
 			 type:"GET",			 			 
 			 contentType:"application/json; charset=utf-8",
@@ -754,15 +832,15 @@ function loaddataduplicate()
 			 //alert(data);
 			 data=JSON.parse(data);
 			   
-			   var state=$("#city");
-			   state.empty();
+			   var citySelect=$("#city");
+			   citySelect.empty();
 			   var option=$("<option value='' />").html("Select City");
-			   state.append(option);
+			   citySelect.append(option);
 			   $.each(data, function (i, user) {
                         //Create new option
                         option = $('<option value='+user.id+' />').html(user.city);
                         //append city states drop down
-                        state.append(option);
+                        citySelect.append(option);
                     });
 			 }});
 	  }
@@ -770,7 +848,7 @@ function loaddataduplicate()
 	  
 	  function region(city)
 	  {          
-      $.ajax({
+      return $.ajax({
 			 url:"api/outlets-web.php?getregion&city="+city,
 			 type:"GET",			 			 
 			 contentType:"application/json; charset=utf-8",
@@ -778,15 +856,15 @@ function loaddataduplicate()
 			 //alert(data);
 			 data=JSON.parse(data);
 			   
-			   var state=$("#region");
-			   state.empty();
+			   var regionSelect=$("#region");
+			   regionSelect.empty();
 			   var option=$("<option value='' />").html("Select Region");
-			   state.append(option);
+			   regionSelect.append(option);
 			   $.each(data, function (i, user) {
                         //Create new option
                         option = $('<option value='+user.region+' />').html(user.name);
                         //append city states drop down
-                        state.append(option);
+                        regionSelect.append(option);
                     });
 			 }});
 	  }
@@ -794,7 +872,7 @@ function loaddataduplicate()
 	  function area(region)
 	  {
 
-      $.ajax({
+      return $.ajax({
 			 url:"api/outlets-web.php?getrouter&region="+region,
 			 type:"GET",			 
 			 contentType:"application/json; charset=utf-8",
@@ -802,15 +880,15 @@ function loaddataduplicate()
 				 //alert(data);
 			 data=JSON.parse(data);
 			   
-			   var state=$("#area");
-			   state.empty();
+			   var areaSelect=$("#area");
+			   areaSelect.empty();
 			   var option=$("<option value='' />").html("Select Area");
-			   state.append(option);
+			   areaSelect.append(option);
 			   $.each(data, function (i, user) {
                         //Create new option
                         option = $('<option value='+user.id+'>').html(user.area);
                         //append city states drop down
-                        state.append(option);
+                        areaSelect.append(option);
                     });
 			 }});
 	  }
@@ -819,7 +897,7 @@ function loaddataduplicate()
     function distributor()
 	  {
 
-      $.ajax({
+      return $.ajax({
 			 url:"api/outlets-web.php?getdistributor",
 			 type:"GET",			 
 			 contentType:"application/json; charset=utf-8",
@@ -827,15 +905,15 @@ function loaddataduplicate()
 				 //alert(data);
 			 data=JSON.parse(data);
 			   
-			   var distributor=$("#distributor");
-			   distributor.empty();
+			   var distributorSelect=$("#distributor");
+			   distributorSelect.empty();
 			   var option=$("<option value='' />").html("Select distributor");
-			   distributor.append(option);
+			   distributorSelect.append(option);
 			   $.each(data, function (i, res) {
                         //Create new option
                         option = $('<option value='+res.id+'>').html(res.name);
                         //append city distributors drop down
-                        distributor.append(option);
+                        distributorSelect.append(option);
                     });
 			 }});
 	  }
@@ -868,10 +946,19 @@ function loaddataduplicate()
 
 
 $(document).ready(function(){
-   //loaddata();
-   distributor();
+   restoreFilterState();
    $("#empdoj").datepicker({format:'yyyy-m-dd'});
    $("#btnsearch").click(function(){searchdata();});
+   $("#btnreset").click(function(){
+       sessionStorage.removeItem('outlet_search_filters');
+       $("#state").val('').trigger('change');
+       $("#city").empty().append('<option value="">Select City</option>').trigger('change');
+       $("#region").empty().append('<option value="">Select Region</option>').trigger('change');
+       $("#area").empty().append('<option value="">Select Route</option>').trigger('change');
+       $("#outletType").val('').trigger('change');
+       $("#distributor").val('').trigger('change');
+       loaddata();
+   });
    $("#btnduplicate").click(function(){loaddataduplicate();});
    $("#btnalloutlets").click(function(){loaddata();});   
    $("#deleteselected").click(function(){
