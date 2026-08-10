@@ -1065,26 +1065,28 @@ if (isset($_GET['checktodayvisit'])) {
 
     try {
         // Read form data directly from $_POST (with $_REQUEST fallback)
-        $outlet_id = isset($_POST['outlet_id']) ? trim((string)$_POST['outlet_id']) : (isset($_POST['outletid']) ? trim((string)$_POST['outletid']) : (isset($_REQUEST['outlet_id']) ? trim((string)$_REQUEST['outlet_id']) : ''));
-        $userid = isset($_POST['userid']) ? trim((string)$_POST['userid']) : (isset($_POST['user_id']) ? trim((string)$_POST['user_id']) : (isset($_REQUEST['userid']) ? trim((string)$_REQUEST['userid']) : ''));
-        $visit_date = isset($_POST['visit_date']) ? trim((string)$_POST['visit_date']) : (isset($_POST['date']) ? trim((string)$_POST['date']) : (isset($_REQUEST['visit_date']) ? trim((string)$_REQUEST['visit_date']) : ''));
+        $outlet_id = isset($_POST['outlet_id']) ? trim((string)$_POST['outlet_id']) : null;
+        $userid = isset($_POST['userid']) ? trim((string)$_POST['userid']) : null;
 
-        // Fallback to php://input if $_POST is empty
-        if (empty($outlet_id) || empty($userid)) {
-            $raw_input = file_get_contents('php://input');
-            $json_input = json_decode($raw_input, true);
-            if (is_array($json_input)) {
-                if (empty($outlet_id)) {
-                    $outlet_id = isset($json_input['outlet_id']) ? trim((string)$json_input['outlet_id']) : (isset($json_input['outletid']) ? trim((string)$json_input['outletid']) : '');
-                }
-                if (empty($userid)) {
-                    $userid = isset($json_input['userid']) ? trim((string)$json_input['userid']) : (isset($json_input['user_id']) ? trim((string)$json_input['user_id']) : '');
-                }
-                if (empty($visit_date)) {
-                    $visit_date = isset($json_input['visit_date']) ? trim((string)$json_input['visit_date']) : (isset($json_input['date']) ? trim((string)$json_input['date']) : '');
-                }
-            }
-        }
+        $visit_date = isset($_POST['visit_date']) ? trim((string)$_POST['visit_date']):null;
+
+
+        // // Fallback to php://input if $_POST is empty
+        // if (empty($outlet_id) || empty($userid)) {
+        //     $raw_input = file_get_contents('php://input');
+        //     $json_input = json_decode($raw_input, true);
+        //     if (is_array($json_input)) {
+        //         if (empty($outlet_id)) {
+        //             $outlet_id = isset($json_input['outlet_id']) ? trim((string)$json_input['outlet_id']) : (isset($json_input['outletid']) ? trim((string)$json_input['outletid']) : '');
+        //         }
+        //         if (empty($userid)) {
+        //             $userid = isset($json_input['userid']) ? trim((string)$json_input['userid']) : (isset($json_input['user_id']) ? trim((string)$json_input['user_id']) : '');
+        //         }
+        //         if (empty($visit_date)) {
+        //             $visit_date = isset($json_input['visit_date']) ? trim((string)$json_input['visit_date']) : (isset($json_input['date']) ? trim((string)$json_input['date']) : '');
+        //         }
+        //     }
+        // }
 
 		echo json_encode(['visted_date'=>$visted_date,'userId'=>$userid,'outletId'=>$outlet_id, 'post'=>$_POST]);
 		die;
