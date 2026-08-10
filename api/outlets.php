@@ -1058,5 +1058,86 @@ if(isset($_GET['sync']))
 	   
 	    echo $response; 
    }
-   
+
+if (isset($_GET['checktodayvisit'])) {
+    header('Content-Type: application/json');
+    $response = array();
+
+    try {
+        // Read form data directly from $_POST (with $_REQUEST fallback)
+        $outlet_id = isset($_POST['outlet_id']) ? trim((string)$_POST['outlet_id']) : (isset($_POST['outletid']) ? trim((string)$_POST['outletid']) : (isset($_REQUEST['outlet_id']) ? trim((string)$_REQUEST['outlet_id']) : ''));
+        $userid = isset($_POST['userid']) ? trim((string)$_POST['userid']) : (isset($_POST['user_id']) ? trim((string)$_POST['user_id']) : (isset($_REQUEST['userid']) ? trim((string)$_REQUEST['userid']) : ''));
+        $visit_date = isset($_POST['visit_date']) ? trim((string)$_POST['visit_date']) : (isset($_POST['date']) ? trim((string)$_POST['date']) : (isset($_REQUEST['visit_date']) ? trim((string)$_REQUEST['visit_date']) : ''));
+
+        // Fallback to php://input if $_POST is empty
+        if (empty($outlet_id) || empty($userid)) {
+            $raw_input = file_get_contents('php://input');
+            $json_input = json_decode($raw_input, true);
+            if (is_array($json_input)) {
+                if (empty($outlet_id)) {
+                    $outlet_id = isset($json_input['outlet_id']) ? trim((string)$json_input['outlet_id']) : (isset($json_input['outletid']) ? trim((string)$json_input['outletid']) : '');
+                }
+                if (empty($userid)) {
+                    $userid = isset($json_input['userid']) ? trim((string)$json_input['userid']) : (isset($json_input['user_id']) ? trim((string)$json_input['user_id']) : '');
+                }
+                if (empty($visit_date)) {
+                    $visit_date = isset($json_input['visit_date']) ? trim((string)$json_input['visit_date']) : (isset($json_input['date']) ? trim((string)$json_input['date']) : '');
+                }
+            }
+        }
+
+        if (empty($visit_date)) {
+            $visit_date = date("Y-m-d");
+        } else {
+            $visit_date = date("Y-m-d", strtotime($visit_date));
+        }
+
+        if (empty($outlet_id)) {
+            throw new Exception("Missing required field: outlet_id");
+        }
+
+        if (!empty($userid)) {
+            $stmt = $con->prepare("SELECT id FROM outletactivity WHERE outletid = ? AND userid = ? AND activitydate = ? ORDER BY id DESC LIMIT 1");
+            if (!$stmt) {
+                throw new Exception("Prepare statement failed: " . $con->error);
+            }
+            $stmt->bind_param("sss", $outlet_id, $userid, $visit_date);
+        } else {
+            $stmt = $con->prepare("SELECT id FROM outletactivity WHERE outletid = ? AND activitydate = ? ORDER BY id DESC LIMIT 1");
+            if (!$stmt) {
+                throw new Exception("Prepare statement failed: " . $con->error);
+            }
+            $stmt->bind_param("ss", $outlet_id, $visit_date);
+        }
+
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+
+        $res = $stmt->get_result();
+
+        if ($row = $res->fetch_assoc()) {
+            $response["success"] = true;
+            $response["is_first_visit"] = false;
+            $response["visit_id"] = (string)$row['id'];
+        } else {
+            $response["success"] = true;
+            $response["is_first_visit"] = true;
+            $response["visit_id"] = "";
+        }
+
+        $stmt->close();
+        echo json_encode($response);
+
+    } catch (Throwable $e) {
+        $response["success"] = false;
+        $response["is_first_visit"] = false;
+        $response["visit_id"] = "";
+        $response["error_details"] = $e->getMessage();
+        echo json_encode($response);
+    }
+    return;
+}
+
 ?>
+

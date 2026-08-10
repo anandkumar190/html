@@ -1072,14 +1072,12 @@ if (isset($_GET['notvist'])) {
         while ($sRow = mysqli_fetch_assoc($resSums)) {
             $sum30Val  = (float)($sRow['sum30'] ?? 0);
             $sum180Val = (float)($sRow['sum180'] ?? 0);
-            $outletSums[$sRow['outlet_id']] = [
+        $outletSums[$sRow['outlet_id']] = [
                 'sum30'  => round($sum30Val, 2),
                 'sum180' => ($sum180Val > 0) ? round($sum180Val / 6, 2) : 0,
             ];
         }
-    }
-
-    $response = [];
+     $response = [];
     $total = $gt = $mt = $mtl = $milkbooth = $wholesaler = 0;
 
     while ($row = mysqli_fetch_assoc($res)) {
@@ -1110,7 +1108,6 @@ if (isset($_GET['notvist'])) {
             'contactperson'       => $row['contactperson'],
             'contact'             => $row['contact'],
             'address'             => $row['address'],
-            // Running totals
             'mt'                  => $mt,
             'gt'                  => $gt,
             'mtl'                 => $mtl,
@@ -1124,7 +1121,145 @@ if (isset($_GET['notvist'])) {
     return;
 }
 
+if (isset($_GET['checktodayorder'])) {
+    header('Content-Type: application/json');
+    $response = array();
 
+    try {
+        // Read form data directly from $_POST (with $_REQUEST fallback)
+        $outlet_id = isset($_POST['outlet_id']) ? trim((string)$_POST['outlet_id']) : (isset($_POST['outletid']) ? trim((string)$_POST['outletid']) : (isset($_REQUEST['outlet_id']) ? trim((string)$_REQUEST['outlet_id']) : ''));
+        $userid = isset($_POST['userid']) ? trim((string)$_POST['userid']) : (isset($_POST['user_id']) ? trim((string)$_POST['user_id']) : (isset($_REQUEST['userid']) ? trim((string)$_REQUEST['userid']) : ''));
+        $order_date = isset($_POST['order_date']) ? trim((string)$_POST['order_date']) : (isset($_POST['date']) ? trim((string)$_POST['date']) : (isset($_REQUEST['order_date']) ? trim((string)$_REQUEST['order_date']) : ''));
 
+        // Fallback to php://input if $_POST is empty
+        if (empty($outlet_id) || empty($userid)) {
+            $raw_input = file_get_contents('php://input');
+            $json_input = json_decode($raw_input, true);
+            if (is_array($json_input)) {
+                if (empty($outlet_id)) {
+                    $outlet_id = isset($json_input['outlet_id']) ? trim((string)$json_input['outlet_id']) : (isset($json_input['outletid']) ? trim((string)$json_input['outletid']) : '');
+                }
+                if (empty($userid)) {
+                    $userid = isset($json_input['userid']) ? trim((string)$json_input['userid']) : (isset($json_input['user_id']) ? trim((string)$json_input['user_id']) : '');
+                }
+                if (empty($order_date)) {
+                    $order_date = isset($json_input['order_date']) ? trim((string)$json_input['order_date']) : (isset($json_input['date']) ? trim((string)$json_input['date']) : '');
+                }
+            }
+        }
+
+        if (empty($order_date)) {
+            $order_date = date("Y-m-d");
+        } else {
+            $order_date = date("Y-m-d", strtotime($order_date));
+        }
+
+        if (empty($outlet_id)) {
+            throw new Exception("Missing required field: outlet_id");
+        }
+
+        $start_time = $order_date . " 00:00:00";
+        $end_time = $order_date . " 23:59:59";
+
+        if (!empty($userid)) {
+            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND user_id = ? AND booking_time >= ? AND booking_time <= ? ORDER BY id DESC LIMIT 1");
+            if (!$stmt) {
+                throw new Exception("Prepare statement failed: " . $con->error);
+            }
+            $stmt->bind_param("ssss", $outlet_id, $userid, $start_time, $end_time);
+        } else {
+            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND booking_time >= ? AND booking_time <= ? ORDER BY id DESC LIMIT 1");
+            if (!$stmt) {
+                throw new Exception("Prepare statement failed: " . $con->error);
+            }
+            $stmt->bind_param("sss", $outlet_id, $start_time, $end_time);
+        }
+
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+
+        $res = $stmt->get_result();
+
+        if ($row = $res->fetch_assoc()) {
+            $order_id = (string)$row['id'];
+            $total_amount = $row['total_amount'];
+
+            $stmt_items = $con->prepare("SELECT category_id, subcategory_id, product_id, product_name, qty_no, total_price FROM booking_item WHERE booking_id_fk = ? ORDER BY id ASC");
+            if (!$stmt_items) {
+                throw new Exception("Prepare statement for items failed: " . $con->error);
+            }
+            $stmt_items->bind_param("s", $order_id);
+            $stmt_items->execute();
+            $res_items = $stmt_items->get_result();
+
+            $product_ids = array();
+            $product_names = array();
+            $category_ids = array();
+            $subcategory_ids = array();
+            $qty_nos = array();
+            $product_wise_total_prices = array();
+            $sum_total = 0.00;
+
+            while ($item = $res_items->fetch_assoc()) {
+                $product_ids[] = $item['product_id'];
+                $product_names[] = $item['product_name'];
+                $category_ids[] = $item['category_id'];
+                $subcategory_ids[] = $item['subcategory_id'];
+                $qty_nos[] = $item['qty_no'];
+                $item_price = (float)$item['total_price'];
+                $product_wise_total_prices[] = number_format($item_price, 2, '.', '');
+                $sum_total += $item_price;
+            }
+            $stmt_items->close();
+
+            $final_total = ($total_amount !== null && $total_amount !== '') ? (float)$total_amount : $sum_total;
+
+            $product_id_str = implode(", ", $product_ids);
+            $product_name_str = implode(", ", $product_names);
+            $category_id_str = implode(", ", array_values(array_unique($category_ids)));
+            $subcategory_id_str = implode(", ", $subcategory_ids);
+            $qty_no_str = implode(", ", $qty_nos);
+            $product_wise_total_price_str = implode(", ", $product_wise_total_prices);
+            $total_price_before_discount_str = number_format($final_total, 2, '.', '');
+
+            $response = array(
+                "success" => true,
+                "is_first_order" => false,
+                "order_id" => $order_id,
+                "data" => array(
+                    "products" => array(
+                        array(
+                            "product_id" => $product_id_str,
+                            "product_name" => $product_name_str,
+                            "category_id" => $category_id_str,
+                            "subcategory_id" => $subcategory_id_str,
+                            "qty_no" => $qty_no_str,
+                            "product_wise_total_price" => $product_wise_total_price_str,
+                            "total_price_before_discount" => $total_price_before_discount_str
+                        )
+                    )
+                )
+            );
+        } else {
+            $response = array(
+                "success" => true,
+                "is_first_order" => true
+            );
+        }
+
+        $stmt->close();
+        echo json_encode($response);
+
+    } catch (Throwable $e) {
+        $response = array(
+            "success" => false,
+            "is_first_order" => true,
+            "error_details" => $e->getMessage()
+        );
+        echo json_encode($response);
+    }
+    return;
+}
 
 ?>
