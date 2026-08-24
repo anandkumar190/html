@@ -1,19 +1,15 @@
 Options -MultiViews
 RewriteEngine On
 
-# 1) API pretty routing: /api/foo -> /api/foo.php
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/api/$1.php -f
-RewriteRule ^api/(.+?)/?$ api/$1.php [L]
+# 1) If the requested path is an existing file or directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
-# 2) Route pretty URL to matching .php file (e.g. /home -> home.php, /login -> login.php)
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+# 2) Route pretty URL to matching .php file (e.g. /home -> home.php, /dashboard-map -> dashboard-map.php)
+RewriteCond %{DOCUMENT_ROOT}/$1.php -f [OR]
+RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^(.+?)/?$ $1.php [L]
 
 # 3) Fallback for virtual routes
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [L]
