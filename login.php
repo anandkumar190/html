@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lgnbtn'])) {
     $obj = new Login($con, $user, $pass);
 
     if ($obj->login()) {
-        header("Location: index");
+        header("Location: home");
         exit;
     } else {
         header("Location: login?err=1");

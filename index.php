@@ -1,10 +1,13 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (empty($_SESSION['tittu'])) {
     header("Location: login");
     exit;
 }
 
-header("Location: home");
+// Render dashboard directly to avoid any redirect loops
+require_once __DIR__ . '/home.php';
 exit;

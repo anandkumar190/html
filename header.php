@@ -4,9 +4,9 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 ob_start();
 
-if (empty($_SESSION['tittu'])) {
+$currentPage = basename($_SERVER['PHP_SELF'] ?? '');
+if (empty($_SESSION['tittu']) && $currentPage !== 'login.php') {
     header("Location: login?expire=1");
-    echo "<script>window.location='login?expire=1';</script>";
     exit();
 }
 
