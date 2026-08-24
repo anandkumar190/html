@@ -167,8 +167,6 @@
           mapTypeControl: true,
           streetViewControl: false
         });
-
-        loadOutletsOnMap();
       }
 
       function clearMarkers() {
