@@ -24,7 +24,7 @@
             <ul class="nav nav-tabs pull-left">
               <li class="active"><a href="#today-activity" data-toggle="tab">Distributors</a></li>
               <li><a href="#tear-tree-view" data-toggle="tab">Add Distributor</a></li>
-              
+              <li><a href="#distributor-map-view" data-toggle="tab"><i class="fa fa-map-marker"></i> Map View</a></li>
             </ul>
             
             <div class="tab-content no-padding">
@@ -274,6 +274,11 @@
             </div>
             </section>    
               <!-- Section Form close-->
+              </div>
+
+              <!-- Map View tab Start -->
+              <div class="chart tab-pane" id="distributor-map-view" style="position: relative; min-height: 600px;">
+                <iframe src="distributors-map.php" style="border: none; width: 100%; height: 750px;"></iframe>
               </div>
             </div>
 

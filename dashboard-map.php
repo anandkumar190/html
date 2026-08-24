@@ -124,8 +124,6 @@
     <script>
       var map;
 	  var marker;
-	  var latlng = new google.maps.LatLng(20.5937, 78.9629);
-      marker.setPosition(latlng);
 	  function initMap() {
 		  $("#loader").show();
         //var myLatLng = {lat:28.96368627576849, lng: 77.73731481415368};

@@ -1,8 +1,8 @@
 <footer class="main-footer">
     <div class="pull-right hidden-xs">
-      <b>Version</b> 2.4.0
+      <b>Version</b> 4.4.0
     </div>
-    <strong>Copyright &copy; 2014-<?php echo date('Y');?> <a href="http://www.tceinfosolution.com">TCE Infosolutions</a>.</strong> All rights reserved.
+    <strong>Copyright &copy; 2014-<?php echo date('Y');?> <a href="https://vivanfoods.com">vivanfoods</a>.</strong> All rights reserved.
   </footer>
 
   <!-- Control Sidebar -->

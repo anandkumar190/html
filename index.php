@@ -2,9 +2,9 @@
 session_start();
 
 if (empty($_SESSION['tittu'])) {
-    header("Location: /login.php");
+    header("Location: login");
     exit;
 }
 
-header("Location: /home.php");
+header("Location: home");
 exit;

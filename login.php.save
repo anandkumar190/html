@@ -121,8 +121,7 @@ api/log.php  <!-- Bootstrap 3.3.7 -->
   </div>
   <!-- /.lockscreen-item -->
   
-  <div class="lockscreen-footer text-center">
-    Copyright &copy; 2014-<?php echo date('Y');?> <b><a href="http://www.tceinfosolution.com" class="text-black">TCE Infosolutions</a></b><br>
+  <div class="lockscreen-footer text-center">https://vivanfoods.com" class="text-black">vivanfoods</a></b><br>
     All rights reserved
   </div>
 </div>

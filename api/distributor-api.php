@@ -1,6 +1,7 @@
 <?php
-
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if(!isset($_SESSION['tittu']))
 {
 	echo"invalid";
@@ -46,7 +47,7 @@ if(!isset($_SESSION['tittu']))
 
   $userid=$_SESSION['id'];
   $usertype=$_SESSION['usertype'];
-  require('../connect.php');
+  require_once __DIR__ . '/../connect.php';
 
 $time=date("H:i:s"); 
   $datetime = date("Y-m-d H:i:s");
@@ -324,6 +325,184 @@ if(isset($_GET['import']))
       mysqli_query($con,"delete from employees where id='$id'");
 	}
      echo "Distributors Delete Succesfully...";
-  }  
+  }
 
+  else if(isset($_GET['getstate']))
+  {
+      $res = mysqli_query($con, "SELECT DISTINCT s.id AS state, s.name FROM employees e JOIN states s ON e.state = s.id WHERE e.usertype = '3' ORDER BY s.name");
+      $response = array();
+      while($row = mysqli_fetch_assoc($res)) {
+          $response[] = $row;
+      }
+      header('Content-Type: application/json');
+      echo json_encode($response);
+      exit;
+  }
+
+  else if(isset($_GET['getcity']))
+  {
+      $state = isset($_GET['state']) ? mysqli_real_escape_string($con, trim($_GET['state'])) : '';
+      $where = "WHERE e.usertype = '3'";
+      if($state != '') {
+          $where .= " AND e.state = '$state'";
+      }
+      $res = mysqli_query($con, "SELECT DISTINCT c.id, c.city FROM employees e JOIN cities c ON e.city = c.id $where ORDER BY c.city");
+      $response = array();
+      while($row = mysqli_fetch_assoc($res)) {
+          $response[] = $row;
+      }
+      header('Content-Type: application/json');
+      echo json_encode($response);
+      exit;
+  }
+
+  else if(isset($_GET['getregion']))
+  {
+      $city = isset($_GET['city']) ? mysqli_real_escape_string($con, trim($_GET['city'])) : '';
+      $where = "WHERE e.usertype = '3'";
+      if($city != '') {
+          $where .= " AND e.city = '$city'";
+      }
+      $res = mysqli_query($con, "SELECT DISTINCT r.id AS region, r.name FROM employees e JOIN regions r ON e.region = r.id $where ORDER BY r.name");
+      $response = array();
+      while($row = mysqli_fetch_assoc($res)) {
+          $response[] = $row;
+      }
+      header('Content-Type: application/json');
+      echo json_encode($response);
+      exit;
+  }
+
+  else if(isset($_GET['getdistributor']))
+  {
+      $res = mysqli_query($con, "SELECT id, name, empid FROM employees WHERE usertype = '3' ORDER BY name");
+      $response = array();
+      while($row = mysqli_fetch_assoc($res)) {
+          $response[] = $row;
+      }
+      header('Content-Type: application/json');
+      echo json_encode($response);
+      exit;
+  }
+
+  else if(isset($_GET['showmap']) || isset($_GET['list-of-distributor']))
+  {
+      $state = isset($_GET['state']) ? trim($_GET['state']) : '';
+      $city = isset($_GET['city']) ? trim($_GET['city']) : '';
+      $region = isset($_GET['region']) ? trim($_GET['region']) : '';
+      $distributor = isset($_GET['distributor']) ? trim($_GET['distributor']) : '';
+
+      $selectQry = "
+          SELECT 
+              e.id, 
+              e.name, 
+              e.empid,
+              e.email, 
+              e.contactperson, 
+              e.contact, 
+              e.address, 
+              e.latitude,
+              e.longitude,
+              e.image,
+              c.city, 
+              s.name AS state,
+              r.name AS region
+          FROM employees e 
+          LEFT JOIN states s ON e.state = s.id 
+          LEFT JOIN cities c ON e.city = c.id 
+          LEFT JOIN regions r ON e.region = r.id
+          WHERE e.usertype = '3'
+      ";
+
+      if ($distributor != "") {
+          $selectQry .= " AND e.id = '" . mysqli_real_escape_string($con, $distributor) . "'";
+      } else {
+          if ($state != "") {
+              $selectQry .= " AND e.state = '" . mysqli_real_escape_string($con, $state) . "'";
+          }
+          if ($city != "") {
+              $selectQry .= " AND e.city = '" . mysqli_real_escape_string($con, $city) . "'";
+          }
+          if ($region != "") {
+              $selectQry .= " AND e.region = '" . mysqli_real_escape_string($con, $region) . "'";
+          }
+      }
+
+      $selectQry .= " ORDER BY e.name";
+      $result = mysqli_query($con, $selectQry);
+      if (!$result) {
+          die("Query failed: " . mysqli_error($con));
+      }
+
+      // Count outlets and routes for each distributor
+      $outletsResult = mysqli_query($con, "
+          SELECT 
+              a.distributor_id,
+              COUNT(DISTINCT o.id) AS total_outlet_count,
+              COUNT(DISTINCT a.id) AS total_route_count 
+          FROM area a
+          LEFT JOIN outlets o ON o.routeid = a.id
+          GROUP BY a.distributor_id
+      ");
+
+      $arrayRoute = array();
+      $arrayOutlet = array();
+      if ($outletsResult) {
+          while ($outlets = mysqli_fetch_assoc($outletsResult)) {
+              $arrayOutlet[$outlets['distributor_id']] = $outlets['total_outlet_count'];
+              $arrayRoute[$outlets['distributor_id']] = $outlets['total_route_count'];
+          }
+      }
+
+      $response = array();
+      $total = 0;
+      $withCoords = 0;
+      $statesMap = array();
+      $citiesMap = array();
+
+      while ($row = mysqli_fetch_assoc($result)) {
+          $total++;
+          $lat = trim($row['latitude'] ?? '');
+          $lng = trim($row['longitude'] ?? '');
+          if ($lat != '' && $lng != '' && is_numeric($lat) && is_numeric($lng)) {
+              $withCoords++;
+          }
+          if (!empty($row['state'])) {
+              $statesMap[$row['state']] = true;
+          }
+          if (!empty($row['city'])) {
+              $citiesMap[$row['city']] = true;
+          }
+
+          $response[] = array(
+              "id" => $row["id"],
+              "empid" => $row["empid"] ?? '',
+              "name" => $row["name"] ?? '',
+              "email" => $row["email"] ?? '',
+              "contactperson" => $row["contactperson"] ?? '',
+              "contact" => $row["contact"] ?? '',
+              "address" => $row["address"] ?? '',
+              "city" => $row["city"] ?? '',
+              "state" => $row["state"] ?? '',
+              "region" => $row["region"] ?? '',
+              "latitude" => $row["latitude"] ?? '',
+              "longitude" => $row["longitude"] ?? '',
+              "image" => $row["image"] ?? '',
+              "no_of_outlets" => $arrayOutlet[$row["id"]] ?? 0,
+              "no_of_routes" => $arrayRoute[$row["id"]] ?? 0
+          );
+      }
+
+      // Add summary object at the end
+      $response[] = array(
+          "total" => $total,
+          "mapped" => $withCoords,
+          "states_count" => count($statesMap),
+          "cities_count" => count($citiesMap)
+      );
+
+      header('Content-Type: application/json');
+      echo json_encode($response);
+      exit;
+  }
 ?>

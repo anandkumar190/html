@@ -1,15 +1,6 @@
 <?php require("connect.php");?>
 <?php $title="Dashboard";?>
-<?php require("header.php");
-?>
-
-<?php
-session_start();
-if (empty($_SESSION['tittu'])) {
-    header("Location: /login.php?expire=1");
-    exit;
-}
-?>
+<?php require("header.php");?>
 
 <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">

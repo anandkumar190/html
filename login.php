@@ -15,11 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lgnbtn'])) {
     $obj = new Login($con, $user, $pass);
 
     if ($obj->login()) {
-        // login() MUST set $_SESSION['tittu']
-        header("Location: /index.php");
+        header("Location: index");
         exit;
     } else {
-        header("Location: /login.php?err=1");
+        header("Location: login?err=1");
         exit;
     }
 }
@@ -99,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lgnbtn'])) {
     <!-- /.lockscreen-image -->
 
     <!-- lockscreen credentials (contains the form) -->
-    <form class="lockscreen-credentials" id="loginform" action="login.php" method="post" style="margin-left:-2px;">
+    <form class="lockscreen-credentials" id="loginform" action="" method="post" style="margin-left:-2px;">
         <!-- User name -->
         <div class="lockscreen-name">User Email</div>
 
@@ -145,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lgnbtn'])) {
   <!-- /.lockscreen-item -->
   
   <div class="lockscreen-footer text-center">
-    Copyright &copy; 2014-<?php echo date('Y');?> <b><a href="http://www.tceinfosolution.com" class="text-black">TCE Infosolutions</a></b><br>
+    Copyright &copy; 2014-<?php echo date('Y');?> <b><a href="https://vivanfoods.com" class="text-black">vivanfoods</a></b><br>
     All rights reserved
   </div>
 </div>

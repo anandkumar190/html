@@ -1,21 +1,20 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+ob_start();
 
-   session_start();
-   ob_start();
-    // die($_SESSION);
-//   if(!isset($_SESSION['tittu']))
-//   {
-       
-//         // die($_SESSION);
-// 	   header("location:login?expire");
-// 	   echo"<script> window.location='login?expire';</script>";
-// 	   exit();
-//   }
-               $empemail=$_SESSION['tittu'];
-			   $empname=$_SESSION['empname'];
-			   $empid=$_SESSION['empid'];
-			   $id=$_SESSION['id'];
-			   $empimage=$_SESSION['image'];
+if (empty($_SESSION['tittu'])) {
+    header("Location: login?expire=1");
+    echo "<script>window.location='login?expire=1';</script>";
+    exit();
+}
+
+$empemail = $_SESSION['tittu'] ?? '';
+$empname  = $_SESSION['empname'] ?? '';
+$empid    = $_SESSION['empid'] ?? '';
+$id       = $_SESSION['id'] ?? '';
+$empimage = $_SESSION['image'] ?? '';
 ?>
 <!DOCTYPE html>
 <html>
@@ -259,6 +258,7 @@
           </a>
           <ul class="treeview-menu">
             <li><a href="distributors"><i class="fa fa-circle-o"></i> Report </a></li>
+            <li><a href="distributor-map"><i class="fa fa-map-marker"></i> Map View </a></li>
             <!-- <li><a href="#"><i class="fa fa-circle-o"></i> Stock</a></li>
             <li><a href="#"><i class="fa fa-circle-o"></i> Rate List</a></li> -->
           </ul>
