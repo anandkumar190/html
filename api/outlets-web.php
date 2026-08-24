@@ -467,7 +467,7 @@ while ($row = mysqli_fetch_array($result)) {
     array_push($response, $rr);
 }
 	   
-	   //$data=array();
+       header('Content-Type: application/json');
 	   $data=json_encode($response);
 	   echo $data;
 	   return; 
