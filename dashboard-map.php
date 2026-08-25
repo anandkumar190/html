@@ -158,6 +158,8 @@
       var markers = [];
       var activeInfoWindow = null;
 
+debugger;
+
       function initGoogleMap() {
         var defaultCenter = { lat: 20.5937, lng: 78.9629 };
         map = new google.maps.Map(document.getElementById('map'), {
@@ -177,6 +179,8 @@
       }
 
       function loadOutletsOnMap() {
+
+   
         $("#loader").show();
         var state = $("#state").val() || '';
         var city = $("#city").val() || '';
@@ -194,6 +198,7 @@
             if (typeof data === 'string') {
               try {
                 data = JSON.parse(data);
+                debugger;
               } catch (e) {
                 console.error("Failed to parse map data JSON:", e);
                 return;
@@ -226,7 +231,7 @@
             // Render markers (limit to max 1500 to keep UI responsive if entire database is loaded)
             var renderLimit = Math.min(outletList.length, 1500);
 
-            for (var i = 0; i < renderLimit; i++) {
+            for (var i = 0; i < outletList.length; i++) {
               var item = outletList[i];
               var lat = parseFloat(item.latitude);
               var lng = parseFloat(item.longitude);
