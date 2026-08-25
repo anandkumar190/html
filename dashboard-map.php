@@ -145,6 +145,9 @@
           <span class="stat-badge badge-wholesaler" id="wholesaler">Wholesaler: 0</span>
         </div>
       </div>
+      <div id="map-notice" style="display:none; padding: 4px 10px; margin-top: 5px; background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 3px; font-size: 12px;">
+        <i class="fa fa-info-circle"></i> <span id="map-notice-text"></span>
+      </div>
     </div>
 
     <div id="map"></div>
@@ -156,9 +159,20 @@
     <script>
       var map;
       var markers = [];
-      var activeInfoWindow = null;
+      var sharedInfoWindow = null;
+      var currentRenderTimeout = null;
 
-debugger;
+      function escapeHtml(text) {
+        if (!text) return '';
+        var map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+      }
 
       function initGoogleMap() {
         var defaultCenter = { lat: 20.5937, lng: 78.9629 };
@@ -169,19 +183,82 @@ debugger;
           mapTypeControl: true,
           streetViewControl: false
         });
+        sharedInfoWindow = new google.maps.InfoWindow();
       }
 
       function clearMarkers() {
+        if (currentRenderTimeout) {
+          clearTimeout(currentRenderTimeout);
+          currentRenderTimeout = null;
+        }
         for (var i = 0; i < markers.length; i++) {
           markers[i].setMap(null);
         }
         markers = [];
+        if (sharedInfoWindow) {
+          sharedInfoWindow.close();
+        }
+      }
+
+      function renderAllMarkersChunked(outletList, startIndex, chunkSize, bounds, onComplete) {
+        var endIndex = Math.min(startIndex + chunkSize, outletList.length);
+        var iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+
+        for (var i = startIndex; i < endIndex; i++) {
+          var item = outletList[i];
+          var lat = parseFloat(item.latitude);
+          var lng = parseFloat(item.longitude);
+
+          if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+            continue;
+          }
+
+          var latLng = new google.maps.LatLng(lat, lng);
+          bounds.extend(latLng);
+
+          var marker = new google.maps.Marker({
+            position: latLng,
+            map: map,
+            title: item.name || 'Outlet',
+            icon: {
+              url: iconUrl
+            }
+          });
+
+          (function(m, d) {
+            m.addListener('click', function() {
+              var contentString = '<div class="info-window-card">' +
+                '<h4><i class="fa fa-shopping-bag"></i> ' + escapeHtml(d.name || 'Outlet') + '</h4>' +
+                (d.outlettype ? '<p><span class="meta-label">Type:</span> ' + escapeHtml(d.outlettype) + (d.outletsubtype ? ' (' + escapeHtml(d.outletsubtype) + ')' : '') + '</p>' : '') +
+                (d.contactperson ? '<p><span class="meta-label">Contact:</span> ' + escapeHtml(d.contactperson) + (d.contact ? ' - <a href="tel:' + encodeURIComponent(d.contact) + '">' + escapeHtml(d.contact) + '</a>' : '') + '</p>' : (d.contact ? '<p><span class="meta-label">Phone:</span> <a href="tel:' + encodeURIComponent(d.contact) + '">' + escapeHtml(d.contact) + '</a></p>' : '')) +
+                (d.city || d.state ? '<p><span class="meta-label">Location:</span> ' + (d.city ? escapeHtml(d.city) + ', ' : '') + (d.state ? escapeHtml(d.state) : '') + '</p>' : '') +
+                (d.area ? '<p><span class="meta-label">Route:</span> ' + escapeHtml(d.area) + '</p>' : '') +
+                (d.address ? '<p><span class="meta-label">Address:</span> ' + escapeHtml(d.address) + '</p>' : '') +
+                '</div>';
+
+              if (sharedInfoWindow) {
+                sharedInfoWindow.setContent(contentString);
+                sharedInfoWindow.open(map, m);
+              }
+            });
+          })(marker, item);
+
+          markers.push(marker);
+        }
+
+        if (endIndex < outletList.length) {
+          currentRenderTimeout = setTimeout(function() {
+            renderAllMarkersChunked(outletList, endIndex, chunkSize, bounds, onComplete);
+          }, 4);
+        } else {
+          currentRenderTimeout = null;
+          if (onComplete) onComplete();
+        }
       }
 
       function loadOutletsOnMap() {
-
-   
         $("#loader").show();
+        $("#map-notice").hide();
         var state = $("#state").val() || '';
         var city = $("#city").val() || '';
         var region = $("#region").val() || '';
@@ -191,19 +268,10 @@ debugger;
         $.ajax({
           url: 'api/outlets-web.php?showmap=1&state=' + encodeURIComponent(state) + '&city=' + encodeURIComponent(city) + '&region=' + encodeURIComponent(region) + '&area=' + encodeURIComponent(area) + '&distributor=' + encodeURIComponent(distributor),
           type: 'GET',
+          dataType: 'json',
           success: function(data) {
             $("#loader").hide();
             clearMarkers();
-
-            if (typeof data === 'string') {
-              try {
-                data = JSON.parse(data);
-                debugger;
-              } catch (e) {
-                console.error("Failed to parse map data JSON:", e);
-                return;
-              }
-            }
 
             if (!data || data.length === 0) {
               $("#total").html('<i class="fa fa-shopping-cart"></i> Total Outlets: 0');
@@ -215,10 +283,20 @@ debugger;
               return;
             }
 
-            var summary = data[data.length - 1];
-            var outletList = data.slice(0, data.length - 1);
+            var summary = {};
+            var outletList = [];
 
-            $("#total").html('<i class="fa fa-shopping-cart"></i> Total Outlets: ' + (summary.total || outletList.length));
+            // Check if last element contains summary
+            if (data.length > 0 && data[data.length - 1].summary) {
+              summary = data[data.length - 1];
+              outletList = data.slice(0, data.length - 1);
+            } else {
+              summary = data[data.length - 1] || {};
+              outletList = data.slice(0, data.length - 1);
+            }
+
+            var totalCount = summary.total !== undefined ? summary.total : outletList.length;
+            $("#total").html('<i class="fa fa-shopping-cart"></i> Total Outlets: ' + totalCount);
             $("#gt").html('G.T.: ' + (summary.gt || 0));
             $("#mt").html('MTS: ' + (summary.mt || 0));
             $("#mtl").html('MTL: ' + (summary.mtl || 0));
@@ -226,67 +304,18 @@ debugger;
             $("#wholesaler").html('Wholesaler: ' + (summary.wholesaler || 0));
 
             var bounds = new google.maps.LatLngBounds();
-            var validCount = 0;
 
-            // Render markers (limit to max 1500 to keep UI responsive if entire database is loaded)
-            var renderLimit = Math.min(outletList.length, 1500);
-
-            for (var i = 0; i < outletList.length; i++) {
-              var item = outletList[i];
-              var lat = parseFloat(item.latitude);
-              var lng = parseFloat(item.longitude);
-
-              if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-                continue;
-              }
-
-              validCount++;
-              var latLng = new google.maps.LatLng(lat, lng);
-              bounds.extend(latLng);
-
-              var marker = new google.maps.Marker({
-                position: latLng,
-                map: map,
-                title: item.name || 'Outlet',
-                icon: {
-                  url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            // Render all markers as direct icons (no cluster bubbles) smoothly in non-blocking chunks
+            renderAllMarkersChunked(outletList, 0, 500, bounds, function() {
+              if (!bounds.isEmpty()) {
+                if (markers.length === 1) {
+                  map.setCenter(bounds.getCenter());
+                  map.setZoom(14);
+                } else {
+                  map.fitBounds(bounds);
                 }
-              });
-
-              (function(m, d) {
-                var contentString = '<div class="info-window-card">' +
-                  '<h4><i class="fa fa-shopping-bag"></i> ' + (d.name || 'Outlet') + '</h4>' +
-                  (d.outlettype ? '<p><span class="meta-label">Type:</span> ' + d.outlettype + (d.outletsubtype ? ' (' + d.outletsubtype + ')' : '') + '</p>' : '') +
-                  (d.contactperson ? '<p><span class="meta-label">Contact:</span> ' + d.contactperson + (d.contact ? ' - <a href="tel:' + d.contact + '">' + d.contact + '</a>' : '') + '</p>' : (d.contact ? '<p><span class="meta-label">Phone:</span> <a href="tel:' + d.contact + '">' + d.contact + '</a></p>' : '')) +
-                  (d.city || d.state ? '<p><span class="meta-label">Location:</span> ' + (d.city ? d.city + ', ' : '') + (d.state || '') + '</p>' : '') +
-                  (d.area ? '<p><span class="meta-label">Route:</span> ' + d.area + '</p>' : '') +
-                  (d.address ? '<p><span class="meta-label">Address:</span> ' + d.address + '</p>' : '') +
-                  '</div>';
-
-                var infowindow = new google.maps.InfoWindow({
-                  content: contentString
-                });
-
-                m.addListener('click', function() {
-                  if (activeInfoWindow) {
-                    activeInfoWindow.close();
-                  }
-                  infowindow.open(map, m);
-                  activeInfoWindow = infowindow;
-                });
-              })(marker, item);
-
-              markers.push(marker);
-            }
-
-            if (validCount > 0) {
-              if (validCount === 1) {
-                map.setCenter(bounds.getCenter());
-                map.setZoom(14);
-              } else {
-                map.fitBounds(bounds);
               }
-            }
+            });
           },
           error: function(err) {
             $("#loader").hide();

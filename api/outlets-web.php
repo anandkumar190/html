@@ -327,150 +327,129 @@ if(isset($_GET['feedback']))
 
 if(isset($_GET['showmap']))
    {
-	   $state=$_GET['state'];
-	   $region=$_GET['region'];
-	   $city=$_GET['city'];
-	   $routeid=$_GET['area'];
-       $distributor=trim($_GET['distributor']);
+	   $state = isset($_GET['state']) ? mysqli_real_escape_string($con, trim($_GET['state'])) : '';
+	   $region = isset($_GET['region']) ? mysqli_real_escape_string($con, trim($_GET['region'])) : '';
+	   $city = isset($_GET['city']) ? mysqli_real_escape_string($con, trim($_GET['city'])) : '';
+	   $routeid = isset($_GET['area']) ? mysqli_real_escape_string($con, trim($_GET['area'])) : '';
+       $distributor = isset($_GET['distributor']) ? mysqli_real_escape_string($con, trim($_GET['distributor'])) : '';
 
-$selectQry = "
-    SELECT 
-        o.id,
-        cities.city AS city,
-        o.locality,
-        o.distributorid,
-        o.name,
-        o.address,
-        o.lastvisitpic,
-        o.contactperson,
-        o.contact,
-        o.pincode,
-        o.gstnumber,
-        o.outlettype,
-        o.outletsubtype,
-        o.routeid,
-        o.latitude,
-        o.longitude,
-        o.areaid,
-        o.lastvisit,
-        o.creationdate,
-        a.area,
-        o.createdby,
-        CONCAT(d.name, ' - ', d.empid) AS distributor,
-        regions.name AS region,
-        states.name AS state
-    FROM outlets o 
-    JOIN area a ON a.id = o.routeid 
-    JOIN employees d ON d.id = a.distributor_id
-    LEFT JOIN states ON states.id = a.state 
-    LEFT JOIN cities ON cities.id = a.city 
-    LEFT JOIN regions ON regions.id = a.region
-";
+       $selectQry = "
+           SELECT 
+               o.id,
+               o.name,
+               o.address,
+               o.contactperson,
+               o.contact,
+               o.outlettype,
+               o.outletsubtype,
+               o.routeid,
+               o.latitude,
+               o.longitude,
+               o.areaid,
+               a.area,
+               cities.city AS city,
+               states.name AS state,
+               regions.name AS region
+           FROM outlets o 
+           JOIN area a ON a.id = o.routeid 
+           JOIN employees d ON d.id = a.distributor_id
+           LEFT JOIN states ON states.id = a.state 
+           LEFT JOIN cities ON cities.id = a.city 
+           LEFT JOIN regions ON regions.id = a.region
+           WHERE o.latitude IS NOT NULL 
+             AND o.latitude != '' 
+             AND o.latitude != '0'
+             AND o.longitude IS NOT NULL 
+             AND o.longitude != '' 
+             AND o.longitude != '0'
+       ";
 
-// Optional filters
-$isSnd = 0;
+       if ($distributor != "") {
+           $selectQry .= " AND d.id = '$distributor'";
+       } else {
+           if ($state != "") {
+               $selectQry .= " AND a.state = '$state'";
+           }
+           if ($city != "") {
+               $selectQry .= " AND a.city = '$city'";
+           }
+           if ($region != "") {
+               $selectQry .= " AND a.region = '$region'";
+           }
+           if ($routeid != "") {
+               $selectQry .= " AND o.routeid = '$routeid'";
+           }
+       }
 
- if ($distributor!="") {
-			$prefix="where";
-			$selectQry=$selectQry.$prefix." d.id ='$distributor'";
-			$isSnd=1;
-	 }else {
+       $result = mysqli_query($con, $selectQry);
+       if (!$result) {
+           http_response_code(500);
+           echo json_encode(["error" => "Query failed: " . mysqli_error($con)]);
+           exit;
+       }
 
-		if ($state != "") {
-			$prefix = $isSnd == 0 ? " WHERE " : " AND ";
-			$selectQry .= $prefix . "a.state = '$state'";
-			$isSnd = 1;
-		}
+       $response = array();
+       $total = 0;
+       $gt = 0;
+       $mt = 0;
+       $mtl = 0;
+       $milkbooth = 0;
+       $wholesaler = 0;
 
-		if ($city != "") {
-			$prefix = $isSnd == 0 ? " WHERE " : " AND ";
-			$selectQry .= $prefix . "a.city = '$city'";
-			$isSnd = 1;
-		}
+       while ($row = mysqli_fetch_assoc($result)) {
+           $total++;
+           $type = trim($row["outlettype"] ?? '');
 
-		if ($region != "") {
-			$prefix = $isSnd == 0 ? " WHERE " : " AND ";
-			$selectQry .= $prefix . "a.region = '$region'";
-			$isSnd = 1;
-		}
+           if ($type === "MTS") {
+               $mt++;
+           } elseif ($type === "G.T.") {
+               $gt++;
+           } elseif ($type === "Milk Booth") {
+               $milkbooth++;
+           } elseif ($type === "MTL") {
+               $mtl++;
+           } elseif ($type === "Wholesaler") {
+               $wholesaler++;
+           }
 
-		if ($routeid != "") {
-			$prefix = $isSnd == 0 ? " WHERE " : " AND ";
-			$selectQry .= $prefix . "o.routeid = '$routeid'";
-			$isSnd = 1;
-		}
-}
+           $response[] = array(
+               "id" => $row["id"],
+               "name" => $row["name"] ?? '',
+               "address" => $row["address"] ?? '',
+               "contactperson" => $row["contactperson"] ?? '',
+               "contact" => $row["contact"] ?? '',
+               "outlettype" => $row["outlettype"] ?? '',
+               "outletsubtype" => $row["outletsubtype"] ?? '',
+               "routeid" => $row["routeid"] ?? '',
+               "latitude" => $row["latitude"] ?? '',
+               "longitude" => $row["longitude"] ?? '',
+               "areaid" => $row["areaid"] ?? '',
+               "area" => $row["area"] ?? '',
+               "city" => $row["city"] ?? '',
+               "state" => $row["state"] ?? '',
+               "region" => $row["region"] ?? ''
+           );
+       }
+       mysqli_free_result($result);
 
-// Execute the query
-$result = mysqli_query($con, $selectQry);
+       // Append summary statistics as the last element for UI counters
+       $response[] = array(
+           "summary" => true,
+           "total" => $total,
+           "gt" => $gt,
+           "mt" => $mt,
+           "mtl" => $mtl,
+           "milkbooth" => $milkbooth,
+           "wholesaler" => $wholesaler
+       );
 
-if (!$result) {
-    die("Query failed: " . mysqli_error($con));
-}
-
-$response = array();
- $total=0;$gt=0;$mt=0;$mtl=0;$milkbooth=0; $wholesaler=0;
-while ($row = mysqli_fetch_array($result)) {
-    $rr = array();
-    $rr["id"] = $row["id"];
-    $rr["state"] = $row["state"];
-    $rr["city"] = $row["city"];
-    $rr["region"] = $row["region"];
-    $rr["name"] = $row["name"];
-    $rr["address"] = $row["address"];
-    $rr["contact"] = $row["contact"];
-    $rr["pincode"] = $row["pincode"];
-    $rr["gstnumber"] = $row["gstnumber"];
-    $rr["outlettype"] = $row["outlettype"];
-    $rr["outletsubtype"] = $row["outletsubtype"];
-    $rr["routeid"] = $row["routeid"];
-    $rr["latitude"] = $row["latitude"];
-    $rr["longitude"] = $row["longitude"];
-    $rr["areaid"] = $row["areaid"];
-    $rr["area"] = $row["area"];
-
-   if($row["outlettype"]=="MTS")
-		   {
-			   $mt++;
-		   }
-		   if($row["outlettype"]=="G.T.")
-		   {
-			   $gt++;
-		   }
-		   if($row["outlettype"]=="Milk Booth")
-		   {
-			   $milkbooth++;
-		   }
-		   if($row["outlettype"]=="MTL")
-		   {
-			   $mtl++;
-		   }
-
-			if($row["outlettype"]=="Wholesaler")
-		   {
-			   $wholesaler++;
-		   }
-
-
-
-		   
-		   $total++;
-		   
-		   $rr["mt"]=$mt;
-	       $rr["gt"]=$gt;
-	       $rr["mtl"]=$mtl;
-	       $rr["milkbooth"]=$milkbooth;
-	       $rr["wholesaler"]=$wholesaler;
-	       $rr["total"]=$total;
-	
-    
-    array_push($response, $rr);
-}
-	   
-       header('Content-Type: application/json');
-	   $data=json_encode($response);
-	   echo $data;
-	   return; 
+       if (!ob_start("ob_gzhandler")) {
+           ob_start();
+       }
+       header('Content-Type: application/json; charset=utf-8');
+       echo json_encode($response, JSON_UNESCAPED_UNICODE);
+       ob_end_flush();
+       exit;
    }
 
 
