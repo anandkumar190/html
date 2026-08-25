@@ -278,7 +278,7 @@
 
               <!-- Map View tab Start -->
               <div class="chart tab-pane" id="distributor-map-view" style="position: relative; min-height: 600px;">
-                <iframe src="distributors-map.php" style="border: none; width: 100%; height: 750px;"></iframe>
+                <iframe src="distributor-map.php" style="border: none; width: 100%; height: 750px;"></iframe>
               </div>
             </div>
 
