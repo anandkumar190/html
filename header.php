@@ -214,7 +214,7 @@ $empimage = $_SESSION['image'] ?? '';
             <!--<li><a href="cancelorders"><i class="fa fa-circle-o"></i> Cancel Orders</a></li>-->
                   
           </ul>
-        </li>
+        </li>    <li><a href="administrative-visits"><i class="fa fa-building-o"></i> Administrative Visits</a></li>
         
         <li class="treeview">
           <a href="#">
@@ -233,8 +233,6 @@ $empimage = $_SESSION['image'] ?? '';
             
             <li><a href="monthly-attendance"><i class="fa fa-circle-o"></i>Team's Monthly Report</a></li>
             <li><a href="monthly-attendance-ds"><i class="fa fa-circle-o"></i>Team's Monthly Report  DS </a></li>
-
-            
           </ul>
         </li>
         <!-- <li class="treeview">
