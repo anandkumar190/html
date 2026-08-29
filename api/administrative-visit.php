@@ -1,40 +1,42 @@
 <?php
 /**
- * API: Administrative Visit & New Distributor Search Details
+ * Consolidated API: Administrative Visit (Start Visit, Mark Visit & Dashboard Search)
  * 
- * Endpoints & Usage:
- * 1. Save Visit (POST Form Data or JSON):
- *    - user_id (required): Employee ID
- *    - company_name (required): Company / Distributor / Entity Name
- *    - address (required): Address text
- *    - city (required): City
- *    - pin_code (required): 6-digit postal PIN code
- *    - contact_person (required): Contact person name
- *    - cell_no (required): Mobile / Phone number
- *    - gps_address_autofilled (required): GPS address autofilled
- *    - gps_latitude (required): Latitude coordinate
- *    - gps_longitude (required): Longitude coordinate
- *    - in_time (optional): In time (defaults to current timestamp)
- *    - out_time (optional): Out time
- *    - status (optional): Visit status (default 0)
- *    - visit_type (optional): Default 'ADMINISTRATIVE'
- *    - reason_category (required):
- *        1 = 'New Distributor Search'
- *        2 = 'New Distributor KYC'
- *        3 = 'Miscellaneous Visit'
- *    - visit_reason (conditional):
- *        Required if reason_category == 3 (Must be at least 15 words)
+ * 1. STEP 1: Start Visit / Punch In (POST):
+ *    - user_id [Required]: Employee ID
+ *    - gps_latitude [Required]: Latitude coordinate
+ *    - gps_longitude [Required]: Longitude coordinate
+ *    - reason_category [Required]: 1 (New Search), 2 (KYC), 3 (Misc Visit)
+ *    - in_time [Optional]: Defaults to CURRENT_TIMESTAMP
+ *    - gps_address_autofilled [Optional]: GPS address
+ *    Action:
+ *      Inserts into `administrative_visit` with status = 0.
+ *      Returns `administrative_visit_id` for Step 2.
  * 
- *    Child Table Fields (Required only when reason_category == 1):
- *    - areas_covered (required): Areas covered text (Must be at least 6 words)
- *    - gt_stores_covered (optional): Number of General Trade stores (default 0)
- *    - mt_stores_covered (optional): Number of Modern Trade stores (default 0)
- *    - wholesalers_covered (optional): Number of Wholesalers (default 0)
- *    - horeca_covered (optional): Number of HoReCa stores (default 0)
+ * 2. STEP 2: Mark Visit / Punch Out (POST):
+ *    - administrative_visit_id (or visit_id) [Required]: ID from Step 1
+ *    - company_name [Required]: Company / Firm name
+ *    - address [Required]: Address
+ *    - city [Required]: City
+ *    - pin_code [Required]: 6-digit PIN code
+ *    - contact_person [Required]: Contact person name
+ *    - cell_no [Required]: Phone / Mobile number
+ *    - gps_address_autofilled [Optional]: GPS address
+ *    - out_time [Optional]: Defaults to CURRENT_TIMESTAMP
+ *    - visit_reason [Conditional]: Required for Category 3 (>= 15 words)
+ *    
+ *    Child Table Parameters (Required only when reason_category == 1):
+ *    - areas_covered [Required]: Areas covered text (>= 6 words)
+ *    - gt_stores_covered [Optional]: GT stores count (default 0)
+ *    - mt_stores_covered [Optional]: MT stores count (default 0)
+ *    - wholesalers_covered [Optional]: Wholesalers count (default 0)
+ *    - horeca_covered [Optional]: HoReCa stores count (default 0)
+ *    Action:
+ *      Updates `administrative_visit`: sets status = 1, saves out_time & details.
+ *      Inserts/Updates child record in `new_distributor_search_details` if category is 1.
  * 
- * 2. Get Visits (GET):
- *    - user_id (optional): Filter by employee ID
- *    - date (optional): Filter by date (YYYY-MM-DD)
+ * 3. STEP 3: Dashboard Reporting / Search Tool (GET):
+ *    - Supports reservation date range, employee, category, city, and keyword filtering.
  */
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -62,7 +64,7 @@ if (!$con) {
 }
 
 /**
- * Word count helper supporting all character sets and spaces
+ * Word count helper
  */
 function getWordCount($str) {
     $str = trim((string)$str);
@@ -81,11 +83,10 @@ $categoryMap = [
 ];
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$action = $_GET['action'] ?? $_POST['action'] ?? null;
 
-// -------------------------------------------------------------
-// POST Request: Save / Start / Mark Visit Record
-// -------------------------------------------------------------
+// =============================================================
+// POST Requests: Handle Start-Visit (status=0) or Mark-Visit (status=1)
+// =============================================================
 if ($method === 'POST') {
     // Read input data: prioritize $_POST, fallback to JSON
     $input = $_POST;
@@ -99,56 +100,175 @@ if ($method === 'POST') {
         }
     }
 
-    $reqAction = $action ?? $input['action'] ?? null;
-    $visitIdInput = $input['administrative_visit_id'] ?? $input['visit_id'] ?? $input['id'] ?? null;
+    $action = $_GET['action'] ?? $input['action'] ?? null;
+    $visitId = $input['administrative_visit_id'] ?? $input['visit_id'] ?? $input['id'] ?? $input['entryid'] ?? null;
 
-    // Check if this is a "mark-visit" / update request
-    if ($reqAction === 'mark_visit' || $reqAction === 'mark-visit' || (!empty($visitIdInput) && empty($input['start_visit']))) {
-        // Forward directly to mark-visit logic
-        require_once(__DIR__ . "/mark-visit.php");
-        exit();
-    }
+    // ---------------------------------------------------------
+    // CASE A: Start Visit / Punch In (status = 0)
+    // Triggered when no visitId is sent, or action is start_visit
+    // ---------------------------------------------------------
+    if (empty($visitId) || $action === 'start_visit' || $action === 'start-visit' || isset($input['start_visit'])) {
+        $userId = $input['user_id'] ?? $input['userid'] ?? $input['employee_id'] ?? null;
+        if (empty($userId) || !is_numeric($userId)) {
+            echo json_encode([
+                "status" => 0,
+                "message" => "user_id is required and must be numeric"
+            ], JSON_PRETTY_PRINT);
+            exit();
+        }
+        $userId = (int)$userId;
 
-    // Check if this is a "start-visit" / punch-in request (status=0)
-    if ($reqAction === 'start_visit' || $reqAction === 'start-visit' || isset($input['start_visit']) || (isset($input['status']) && (int)$input['status'] === 0 && empty($input['company_name']))) {
-        require_once(__DIR__ . "/start-visit.php");
-        exit();
-    }
+        // Verify employee exists
+        $empCheck = $con->prepare("SELECT id, name, empid FROM employees WHERE id = ? LIMIT 1");
+        $empCheck->bind_param("i", $userId);
+        $empCheck->execute();
+        $empRes = $empCheck->get_result();
 
-    // 1. Validate user_id
-    $userId = $input['user_id'] ?? $input['userid'] ?? $input['employee_id'] ?? null;
-    if (empty($userId) || !is_numeric($userId)) {
-        echo json_encode([
-            "status" => 0,
-            "message" => "user_id is required and must be numeric"
-        ]);
-        exit();
-    }
-    $userId = (int)$userId;
-
-    // Check if user exists in employees table
-    $empCheck = $con->prepare("SELECT id, name FROM employees WHERE id = ? LIMIT 1");
-    $empCheck->bind_param("i", $userId);
-    $empCheck->execute();
-    $empRes = $empCheck->get_result();
-    if (!$empRes || $empRes->num_rows === 0) {
-        echo json_encode([
-            "status" => 0,
-            "message" => "Employee not found with user_id: " . $userId
-        ]);
+        if (!$empRes || $empRes->num_rows === 0) {
+            echo json_encode([
+                "status" => 0,
+                "message" => "Employee not found with user_id: " . $userId
+            ], JSON_PRETTY_PRINT);
+            $empCheck->close();
+            exit();
+        }
+        $employee = $empRes->fetch_assoc();
         $empCheck->close();
+
+        // Validate GPS coordinates
+        $gpsLatitude = $input['gps_latitude'] ?? $input['latitude'] ?? $input['lat'] ?? null;
+        $gpsLongitude = $input['gps_longitude'] ?? $input['longitude'] ?? $input['lng'] ?? $input['log'] ?? null;
+
+        if ($gpsLatitude === null || $gpsLongitude === null || !is_numeric($gpsLatitude) || !is_numeric($gpsLongitude)) {
+            echo json_encode([
+                "status" => 0,
+                "message" => "Valid gps_latitude and gps_longitude are required"
+            ], JSON_PRETTY_PRINT);
+            exit();
+        }
+        $gpsLatitude = (float)$gpsLatitude;
+        $gpsLongitude = (float)$gpsLongitude;
+
+        // Validate reason_category
+        $rawCategory = $input['reason_category'] ?? $input['category'] ?? null;
+        $reasonCategory = null;
+
+        if (is_numeric($rawCategory) && isset($categoryMap[(int)$rawCategory])) {
+            $reasonCategory = (int)$rawCategory;
+        } elseif (is_string($rawCategory)) {
+            $flipped = array_flip($categoryMap);
+            if (isset($flipped[trim($rawCategory)])) {
+                $reasonCategory = $flipped[trim($rawCategory)];
+            }
+        }
+
+        if ($reasonCategory === null || !in_array($reasonCategory, [1, 2, 3])) {
+            echo json_encode([
+                "status" => 0,
+                "message" => "Invalid reason_category. Valid values: 1 (New Distributor Search), 2 (New Distributor KYC), 3 (Miscellaneous Visit)",
+                "allowed_categories" => $categoryMap
+            ], JSON_PRETTY_PRINT);
+            exit();
+        }
+
+        $categoryName = $categoryMap[$reasonCategory];
+        $gpsAddress = trim((string)($input['gps_address_autofilled'] ?? $input['gps_address'] ?? $input['address'] ?? ''));
+        $inTime = !empty($input['in_time']) ? date('Y-m-d H:i:s', strtotime($input['in_time'])) : date('Y-m-d H:i:s');
+        $visitType = !empty($input['visit_type']) ? trim((string)$input['visit_type']) : 'ADMINISTRATIVE';
+
+        // Insert Initial Visit Record (status = 0)
+        $stmtStart = $con->prepare("
+            INSERT INTO administrative_visit (
+                user_id, gps_latitude, gps_longitude, gps_address_autofilled,
+                in_time, status, visit_type, reason_category, created_at
+            ) VALUES (?, ?, ?, ?, ?, 0, ?, ?, NOW())
+        ");
+
+        $stmtStart->bind_param(
+            "iddsssi",
+            $userId,
+            $gpsLatitude,
+            $gpsLongitude,
+            $gpsAddress,
+            $inTime,
+            $visitType,
+            $reasonCategory
+        );
+
+        if ($stmtStart->execute()) {
+            $newVisitId = $stmtStart->insert_id;
+            $stmtStart->close();
+
+            echo json_encode([
+                "status" => 1,
+                "message" => "Visit started successfully. Proceed with mark-visit when finished.",
+                "administrative_visit_id" => $newVisitId,
+                "visit_id" => $newVisitId,
+                "user_id" => $userId,
+                "employee_name" => $employee['name'],
+                "in_time" => $inTime,
+                "gps_latitude" => $gpsLatitude,
+                "gps_longitude" => $gpsLongitude,
+                "gps_address_autofilled" => $gpsAddress,
+                "reason_category" => $reasonCategory,
+                "reason_category_name" => $categoryName,
+                "visit_status" => 0,
+                "status_label" => "In Progress (Pending Mark Visit)"
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit();
+        } else {
+            $err = $stmtStart->error;
+            $stmtStart->close();
+            echo json_encode([
+                "status" => 0,
+                "message" => "Failed to start visit: " . $err
+            ], JSON_PRETTY_PRINT);
+            exit();
+        }
+    }
+
+    // ---------------------------------------------------------
+    // CASE B: Mark Visit / Complete Visit (status = 1)
+    // Triggered when administrative_visit_id is provided
+    // ---------------------------------------------------------
+    $visitId = (int)$visitId;
+
+    // 1. Fetch existing visit record
+    $stmtFetch = $con->prepare("
+        SELECT id, user_id, reason_category, in_time, status, visit_type, gps_latitude, gps_longitude, gps_address_autofilled 
+        FROM administrative_visit 
+        WHERE id = ? 
+        LIMIT 1
+    ");
+    $stmtFetch->bind_param("i", $visitId);
+    $stmtFetch->execute();
+    $resFetch = $stmtFetch->get_result();
+
+    if (!$resFetch || $resFetch->num_rows === 0) {
+        echo json_encode([
+            "status" => 0,
+            "message" => "Visit record not found with ID: " . $visitId
+        ], JSON_PRETTY_PRINT);
+        $stmtFetch->close();
         exit();
     }
-    $employeeInfo = $empRes->fetch_assoc();
-    $empCheck->close();
 
-    // 2. Validate mandatory fields for administrative_visit
+    $existingVisit = $resFetch->fetch_assoc();
+    $stmtFetch->close();
+
+    $reasonCategory = (int)$existingVisit['reason_category'];
+    if (!empty($input['reason_category']) && is_numeric($input['reason_category'])) {
+        $reasonCategory = (int)$input['reason_category'];
+    }
+    $categoryName = $categoryMap[$reasonCategory] ?? 'Unknown';
+
+    // 2. Validate mandatory fields for Mark-Visit
     $companyName = trim((string)($input['company_name'] ?? ''));
     if (empty($companyName)) {
         echo json_encode([
             "status" => 0,
             "message" => "company_name is required"
-        ]);
+        ], JSON_PRETTY_PRINT);
         exit();
     }
 
@@ -157,7 +277,7 @@ if ($method === 'POST') {
         echo json_encode([
             "status" => 0,
             "message" => "address is required"
-        ]);
+        ], JSON_PRETTY_PRINT);
         exit();
     }
 
@@ -166,7 +286,7 @@ if ($method === 'POST') {
         echo json_encode([
             "status" => 0,
             "message" => "city is required"
-        ]);
+        ], JSON_PRETTY_PRINT);
         exit();
     }
 
@@ -175,7 +295,7 @@ if ($method === 'POST') {
         echo json_encode([
             "status" => 0,
             "message" => "pin_code must be exactly 6 numeric digits"
-        ]);
+        ], JSON_PRETTY_PRINT);
         exit();
     }
 
@@ -184,7 +304,7 @@ if ($method === 'POST') {
         echo json_encode([
             "status" => 0,
             "message" => "contact_person is required"
-        ]);
+        ], JSON_PRETTY_PRINT);
         exit();
     }
 
@@ -193,58 +313,16 @@ if ($method === 'POST') {
         echo json_encode([
             "status" => 0,
             "message" => "cell_no is required"
-        ]);
+        ], JSON_PRETTY_PRINT);
         exit();
     }
 
     $gpsAddress = trim((string)($input['gps_address_autofilled'] ?? $input['gps_address'] ?? ''));
     if (empty($gpsAddress)) {
-        // Default to address if gps_address_autofilled is not provided
-        $gpsAddress = $address;
+        $gpsAddress = !empty($existingVisit['gps_address_autofilled']) ? $existingVisit['gps_address_autofilled'] : $address;
     }
 
-    $gpsLatitude = $input['gps_latitude'] ?? $input['latitude'] ?? $input['lat'] ?? null;
-    $gpsLongitude = $input['gps_longitude'] ?? $input['longitude'] ?? $input['lng'] ?? null;
-
-    if ($gpsLatitude === null || $gpsLongitude === null || !is_numeric($gpsLatitude) || !is_numeric($gpsLongitude)) {
-        echo json_encode([
-            "status" => 0,
-            "message" => "Valid gps_latitude and gps_longitude are required"
-        ]);
-        exit();
-    }
-    $gpsLatitude = (float)$gpsLatitude;
-    $gpsLongitude = (float)$gpsLongitude;
-
-    // Optional / Default fields
-    $inTime = !empty($input['in_time']) ? date('Y-m-d H:i:s', strtotime($input['in_time'])) : date('Y-m-d H:i:s');
-    $outTime = !empty($input['out_time']) ? date('Y-m-d H:i:s', strtotime($input['out_time'])) : null;
-    $status = isset($input['status']) && is_numeric($input['status']) ? (int)$input['status'] : 0;
-    $visitType = !empty($input['visit_type']) ? trim((string)$input['visit_type']) : 'ADMINISTRATIVE';
-
-    // 3. Reason Category Validation
-    $rawCategory = $input['reason_category'] ?? $input['category'] ?? null;
-    $reasonCategory = null;
-
-    if (is_numeric($rawCategory) && isset($categoryMap[(int)$rawCategory])) {
-        $reasonCategory = (int)$rawCategory;
-    } elseif (is_string($rawCategory)) {
-        $flipped = array_flip($categoryMap);
-        if (isset($flipped[trim($rawCategory)])) {
-            $reasonCategory = $flipped[trim($rawCategory)];
-        }
-    }
-
-    if ($reasonCategory === null || !in_array($reasonCategory, [1, 2, 3])) {
-        echo json_encode([
-            "status" => 0,
-            "message" => "Invalid reason_category. Valid values: 1 (New Distributor Search), 2 (New Distributor KYC), 3 (Miscellaneous Visit)",
-            "allowed_categories" => $categoryMap
-        ]);
-        exit();
-    }
-
-    $categoryName = $categoryMap[$reasonCategory];
+    $outTime = !empty($input['out_time']) ? date('Y-m-d H:i:s', strtotime($input['out_time'])) : date('Y-m-d H:i:s');
     $visitReason = trim((string)($input['visit_reason'] ?? $input['reason'] ?? ''));
 
     // Category 3 Validation: Miscellaneous Visit requires >= 15 words
@@ -256,7 +334,7 @@ if ($method === 'POST') {
                 "message" => "visit_reason must be at least 15 words for 'Miscellaneous Visit'. Current word count: " . $reasonWordCount,
                 "current_word_count" => $reasonWordCount,
                 "required_min_words" => 15
-            ]);
+            ], JSON_PRETTY_PRINT);
             exit();
         }
     }
@@ -277,7 +355,7 @@ if ($method === 'POST') {
                 "message" => "areas_covered is required and must be at least 6 words for 'New Distributor Search'. Current word count: " . $areasWordCount,
                 "current_word_count" => $areasWordCount,
                 "required_min_words" => 6
-            ]);
+            ], JSON_PRETTY_PRINT);
             exit();
         }
 
@@ -287,23 +365,28 @@ if ($method === 'POST') {
         $horeca = isset($input['horeca_covered']) ? (int)$input['horeca_covered'] : (int)($input['horeca'] ?? 0);
     }
 
-    // 4. Database Transaction: Insert into Parent and Child table
+    // 3. Database Transaction: Update Parent (status = 1) and Upsert Child
     mysqli_begin_transaction($con);
 
     try {
-        // Insert into administrative_visit
-        $stmtParent = $con->prepare("
-            INSERT INTO administrative_visit (
-                user_id, company_name, address, city, pin_code, 
-                contact_person, cell_no, gps_address_autofilled, 
-                gps_latitude, gps_longitude, in_time, out_time, 
-                status, visit_type, reason_category, visit_reason, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        $stmtUpdate = $con->prepare("
+            UPDATE administrative_visit SET
+                company_name = ?,
+                address = ?,
+                city = ?,
+                pin_code = ?,
+                contact_person = ?,
+                cell_no = ?,
+                gps_address_autofilled = ?,
+                out_time = ?,
+                status = 1,
+                reason_category = ?,
+                visit_reason = ?
+            WHERE id = ?
         ");
 
-        $stmtParent->bind_param(
-            "isssssssddssisis",
-            $userId,
+        $stmtUpdate->bind_param(
+            "ssssssssisi",
             $companyName,
             $address,
             $city,
@@ -311,49 +394,57 @@ if ($method === 'POST') {
             $contactPerson,
             $cellNo,
             $gpsAddress,
-            $gpsLatitude,
-            $gpsLongitude,
-            $inTime,
             $outTime,
-            $status,
-            $visitType,
             $reasonCategory,
-            $visitReason
+            $visitReason,
+            $visitId
         );
 
-        if (!$stmtParent->execute()) {
-            throw new Exception("Failed to insert into administrative_visit: " . $stmtParent->error);
+        if (!$stmtUpdate->execute()) {
+            throw new Exception("Failed to update administrative_visit: " . $stmtUpdate->error);
         }
+        $stmtUpdate->close();
 
-        $adminVisitId = $stmtParent->insert_id;
-        $stmtParent->close();
+        $childId = null;
 
-        $searchDetailsId = null;
-
-        // If Category 1: Insert into new_distributor_search_details
+        // If Category 1: Insert or Update new_distributor_search_details
         if ($reasonCategory === 1) {
-            $stmtChild = $con->prepare("
-                INSERT INTO new_distributor_search_details (
-                    administrative_visit_id, areas_covered, gt_stores_covered, 
-                    mt_stores_covered, wholesalers_covered, horeca_covered, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-            ");
+            $stmtChildCheck = $con->prepare("SELECT id FROM new_distributor_search_details WHERE administrative_visit_id = ? LIMIT 1");
+            $stmtChildCheck->bind_param("i", $visitId);
+            $stmtChildCheck->execute();
+            $resChildCheck = $stmtChildCheck->get_result();
+            $existingChild = $resChildCheck->fetch_assoc();
+            $stmtChildCheck->close();
 
-            $stmtChild->bind_param(
-                "isiiii",
-                $adminVisitId,
-                $areasCovered,
-                $gtStores,
-                $mtStores,
-                $wholesalers,
-                $horeca
-            );
-
-            if (!$stmtChild->execute()) {
-                throw new Exception("Failed to insert into new_distributor_search_details: " . $stmtChild->error);
+            if ($existingChild) {
+                $childId = (int)$existingChild['id'];
+                $stmtChild = $con->prepare("
+                    UPDATE new_distributor_search_details SET
+                        areas_covered = ?,
+                        gt_stores_covered = ?,
+                        mt_stores_covered = ?,
+                        wholesalers_covered = ?,
+                        horeca_covered = ?
+                    WHERE id = ?
+                ");
+                $stmtChild->bind_param("siiiii", $areasCovered, $gtStores, $mtStores, $wholesalers, $horeca, $childId);
+            } else {
+                $stmtChild = $con->prepare("
+                    INSERT INTO new_distributor_search_details (
+                        administrative_visit_id, areas_covered, gt_stores_covered,
+                        mt_stores_covered, wholesalers_covered, horeca_covered, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $stmtChild->bind_param("isiiii", $visitId, $areasCovered, $gtStores, $mtStores, $wholesalers, $horeca);
             }
 
-            $searchDetailsId = $stmtChild->insert_id;
+            if (!$stmtChild->execute()) {
+                throw new Exception("Failed to save new_distributor_search_details: " . $stmtChild->error);
+            }
+
+            if (!$childId) {
+                $childId = $stmtChild->insert_id;
+            }
             $stmtChild->close();
         }
 
@@ -363,22 +454,23 @@ if ($method === 'POST') {
         // Success Response
         $response = [
             "status" => 1,
-            "message" => "Administrative visit recorded successfully",
+            "message" => "Visit marked and completed successfully",
             "data" => [
-                "administrative_visit_id" => $adminVisitId,
-                "user_id" => $userId,
-                "employee_name" => $employeeInfo['name'],
+                "administrative_visit_id" => $visitId,
+                "user_id" => (int)$existingVisit['user_id'],
+                "status" => 1,
+                "status_label" => "Completed",
                 "company_name" => $companyName,
                 "address" => $address,
                 "city" => $city,
                 "pin_code" => $pinCode,
                 "contact_person" => $contactPerson,
                 "cell_no" => $cellNo,
-                "gps_latitude" => $gpsLatitude,
-                "gps_longitude" => $gpsLongitude,
-                "in_time" => $inTime,
+                "gps_latitude" => (float)$existingVisit['gps_latitude'],
+                "gps_longitude" => (float)$existingVisit['gps_longitude'],
+                "gps_address_autofilled" => $gpsAddress,
+                "in_time" => $existingVisit['in_time'],
                 "out_time" => $outTime,
-                "visit_type" => $visitType,
                 "reason_category" => $reasonCategory,
                 "reason_category_name" => $categoryName,
                 "visit_reason" => $visitReason ?: null
@@ -387,8 +479,8 @@ if ($method === 'POST') {
 
         if ($reasonCategory === 1) {
             $response["data"]["new_distributor_search_details"] = [
-                "id" => $searchDetailsId,
-                "administrative_visit_id" => $adminVisitId,
+                "id" => $childId,
+                "administrative_visit_id" => $visitId,
                 "areas_covered" => $areasCovered,
                 "gt_stores_covered" => $gtStores,
                 "mt_stores_covered" => $mtStores,
@@ -410,9 +502,9 @@ if ($method === 'POST') {
     }
 }
 
-// -------------------------------------------------------------
-// GET Request: Retrieve Visit Records with Rich Filtering
-// -------------------------------------------------------------
+// =============================================================
+// STEP 3: GET Request (Retrieve Visit Records for Dashboard)
+// =============================================================
 $filterUser = $_GET['user_id'] ?? $_GET['userid'] ?? $_GET['employee'] ?? null;
 $filterDate = $_GET['date'] ?? null;
 $filterStartDate = $_GET['start_date'] ?? null;
@@ -421,7 +513,7 @@ $filterCategory = $_GET['reason_category'] ?? $_GET['category'] ?? null;
 $filterCity = $_GET['city'] ?? null;
 $keyword = $_GET['keyword'] ?? $_GET['search'] ?? null;
 
-// Parse date range if reservation format is sent (e.g., "MM/DD/YYYY - MM/DD/YYYY" or "YYYY-MM-DD - YYYY-MM-DD")
+// Parse date range if reservation format is sent
 if (!empty($_GET['reservation'])) {
     $parts = explode('-', $_GET['reservation']);
     if (count($parts) >= 2) {
