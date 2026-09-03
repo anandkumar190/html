@@ -220,9 +220,9 @@
             position: latLng,
             map: map,
             title: item.name || 'Outlet',
-            icon: {
-              url: iconUrl
-            }
+            // icon: {
+            //   url: iconUrl
+            // }
           });
 
           (function(m, d) {

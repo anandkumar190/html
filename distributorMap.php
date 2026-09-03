@@ -215,9 +215,9 @@
                 map: map,
                 title: item.name,
                 animation: google.maps.Animation.DROP,
-                icon: {
-                  url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                }
+                // icon: {
+                //   url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                // }
               });
 
               (function(m, d) {
