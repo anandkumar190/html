@@ -359,6 +359,7 @@ if ($method === 'POST') {
             exit();
         }
 
+        $productsCurrentlyDistributed = trim((string)($input['products_currently_distributed'] ?? $input['products_distributed'] ?? $input['products'] ?? ''));
         $gtStores = isset($input['gt_stores_covered']) ? (int)$input['gt_stores_covered'] : (int)($input['gt_stores'] ?? 0);
         $mtStores = isset($input['mt_stores_covered']) ? (int)$input['mt_stores_covered'] : (int)($input['mt_stores'] ?? 0);
         $wholesalers = isset($input['wholesalers_covered']) ? (int)$input['wholesalers_covered'] : (int)($input['wholesalers'] ?? 0);
@@ -421,21 +422,22 @@ if ($method === 'POST') {
                 $stmtChild = $con->prepare("
                     UPDATE new_distributor_search_details SET
                         areas_covered = ?,
+                        products_currently_distributed = ?,
                         gt_stores_covered = ?,
                         mt_stores_covered = ?,
                         wholesalers_covered = ?,
                         horeca_covered = ?
                     WHERE id = ?
                 ");
-                $stmtChild->bind_param("siiiii", $areasCovered, $gtStores, $mtStores, $wholesalers, $horeca, $childId);
+                $stmtChild->bind_param("ssiiiii", $areasCovered, $productsCurrentlyDistributed, $gtStores, $mtStores, $wholesalers, $horeca, $childId);
             } else {
                 $stmtChild = $con->prepare("
                     INSERT INTO new_distributor_search_details (
-                        administrative_visit_id, areas_covered, gt_stores_covered,
-                        mt_stores_covered, wholesalers_covered, horeca_covered, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+                        administrative_visit_id, areas_covered, products_currently_distributed,
+                        gt_stores_covered, mt_stores_covered, wholesalers_covered, horeca_covered, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
-                $stmtChild->bind_param("isiiii", $visitId, $areasCovered, $gtStores, $mtStores, $wholesalers, $horeca);
+                $stmtChild->bind_param("issiiii", $visitId, $areasCovered, $productsCurrentlyDistributed, $gtStores, $mtStores, $wholesalers, $horeca);
             }
 
             if (!$stmtChild->execute()) {
@@ -482,6 +484,7 @@ if ($method === 'POST') {
                 "id" => $childId,
                 "administrative_visit_id" => $visitId,
                 "areas_covered" => $areasCovered,
+                "products_currently_distributed" => $productsCurrentlyDistributed,
                 "gt_stores_covered" => $gtStores,
                 "mt_stores_covered" => $mtStores,
                 "wholesalers_covered" => $wholesalers,

@@ -163,7 +163,7 @@ require("header.php");
                             <table id="visitsTable" class="table table-bordered table-striped table-hover" style="width: 100%;">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px;"># ID</th>
+                                        <th style="width: 40px;">ID</th>
                                         <th>Date & Time</th>
                                         <th>Employee</th>
                                         <th>Category</th>
@@ -343,7 +343,7 @@ function initDataTable(data) {
             { 
                 data: 'id',
                 render: function(val) {
-                    return '<strong>#' + val + '</strong>';
+                    return '<strong>' + val + '</strong>';
                 }
             },
             { 
@@ -443,7 +443,7 @@ function initDataTable(data) {
  * Render Detailed Modal for Single Visit Record
  */
 function renderVisitModal(v) {
-    $('#modalTitle').html('<i class="fa fa-building-o"></i> Visit #' + v.id + ' - ' + v.company_name);
+    $('#modalTitle').html('<i class="fa fa-building-o"></i> Visit  - ' + v.company_name);
     
     var categoryBadge = '';
     if (v.reason_category === 1) {
@@ -461,7 +461,6 @@ function renderVisitModal(v) {
     html += '<div class="col-md-6">';
     html += '<h5 style="border-bottom: 2px solid #3c8dbc; padding-bottom: 5px; font-weight: 600;"><i class="fa fa-user"></i> General Information</h5>';
     html += '<table class="table table-condensed table-bordered">';
-    html += '<tr><td class="modal-label" style="width: 40%;">Visit ID:</td><td>#' + v.id + '</td></tr>';
     html += '<tr><td class="modal-label">Employee:</td><td><strong>' + v.employee_name + '</strong> ' + (v.employee_empid ? '(' + v.employee_empid + ')' : '') + '</td></tr>';
     html += '<tr><td class="modal-label">Category:</td><td>' + categoryBadge + '</td></tr>';
     html += '<tr><td class="modal-label">In-Time:</td><td>' + (v.formatted_in_time || v.in_time) + '</td></tr>';

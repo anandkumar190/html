@@ -136,6 +136,65 @@ $dsVisitTimes=[];
 				}
 			}
 
+			// Query Administrative Visits
+			$adminVisitList = [];
+			$adminVisitTimes = [];
+
+			$adminStmt = $con->prepare("
+				SELECT 
+					av.id,
+					av.user_id,
+					DATE(av.in_time) AS visit_date,
+					av.in_time,
+					av.out_time,
+					av.company_name,
+					av.city,
+					av.address,
+					av.pin_code,
+					av.contact_person,
+					av.cell_no,
+					av.reason_category,
+					av.visit_reason,
+					av.status,
+					sd.areas_covered,
+					sd.products_currently_distributed,
+					sd.gt_stores_covered,
+					sd.mt_stores_covered,
+					sd.wholesalers_covered,
+					sd.horeca_covered
+				FROM administrative_visit av
+				LEFT JOIN new_distributor_search_details sd ON av.id = sd.administrative_visit_id
+				WHERE av.user_id = ?
+				AND DATE(av.in_time) BETWEEN ? AND ?
+				ORDER BY av.in_time ASC
+			");
+			$adminStmt->bind_param("iss", $employee, $start, $end);
+			$adminStmt->execute();
+			$adminVisitsRes = $adminStmt->get_result();
+
+			while ($av = $adminVisitsRes->fetch_assoc()) {
+				$vDate = $av['visit_date'];
+				$adminVisitList[$employee][$vDate][] = $av;
+
+				$inTs = !empty($av['in_time']) ? strtotime($av['in_time']) : 0;
+				$outTs = !empty($av['out_time']) ? strtotime($av['out_time']) : $inTs;
+
+				if (!isset($adminVisitTimes[$employee][$vDate])) {
+					$adminVisitTimes[$employee][$vDate] = [
+						'min' => $inTs,
+						'max' => $outTs
+					];
+				} else {
+					if ($inTs > 0 && ($adminVisitTimes[$employee][$vDate]['min'] == 0 || $inTs < $adminVisitTimes[$employee][$vDate]['min'])) {
+						$adminVisitTimes[$employee][$vDate]['min'] = $inTs;
+					}
+					if ($outTs > 0 && ($adminVisitTimes[$employee][$vDate]['max'] == 0 || $outTs > $adminVisitTimes[$employee][$vDate]['max'])) {
+						$adminVisitTimes[$employee][$vDate]['max'] = $outTs;
+					}
+				}
+			}
+			$adminStmt->close();
+
 		$employeeName = '';
 
 		$stmt = $con->prepare("
@@ -243,6 +302,19 @@ $dsVisitTimes=[];
 					}
 			}
 
+			// Check for admin visit times on this date
+			if (isset($adminVisitTimes[$employee][$selectdate])) {
+				$admMin = $adminVisitTimes[$employee][$selectdate]['min'];
+				$admMax = $adminVisitTimes[$employee][$selectdate]['max'];
+
+				if ($admMin > 0 && ($starttimeStamp == 0 || $admMin < $starttimeStamp)) {
+					$starttimeStamp = $admMin;
+				}
+				if ($admMax > 0 && ($endtimeStamp == 0 || $admMax > $endtimeStamp)) {
+					$endtimeStamp = $admMax;
+				}
+			}
+
 			if ($starttimeStamp > 0 && $endtimeStamp > 0) {
 				$diffSeconds = abs($endtimeStamp - $starttimeStamp);
 				$hours       = floor($diffSeconds / 3600);
@@ -289,68 +361,82 @@ $dsVisitTimes=[];
 
 				// Total outlets
 				$totalOutelate = mysqli_fetch_assoc(mysqli_query($con, "
-					SELECT COUNT(id) as total_outelate 
+					SELECT count(id) as total_outelate 
 					FROM outlets 
-					WHERE areaid = '$area' AND DATE(creationdate) < '$selectdate'
-				")) ?: ['total_outelate' => 0];
+					WHERE areaid='$area' AND DATE(creationdate) < '$selectdate'
+				"))['total_outelate'];
 
 				// New outlets
 				$newTotalOutelate = mysqli_fetch_assoc(mysqli_query($con, "
-					SELECT COUNT(DISTINCT o.id) as new_total_outelate 
+					SELECT count(DISTINCT o.id) as new_total_outelate 
 					FROM outletactivity a 
 					JOIN outlets o ON a.outletid = o.id 
-					WHERE a.userid = '$employee' AND a.activitydate = '$selectdate' AND a.activitytype = 'New Outlet Create' AND o.areaid = '$area'
-				")) ?: ['new_total_outelate' => 0];
+					WHERE a.userid='$employee' AND a.activitydate='$selectdate' AND a.activitytype='New Outlet Create' AND o.areaid='$area'
+				"))['new_total_outelate'];
 
 				// Visited outlets
 				$totalVistingOutlate = mysqli_fetch_assoc(mysqli_query($con, "
-					SELECT COUNT(DISTINCT o.id) as total_visting_outlate 
+					SELECT count(DISTINCT o.id) as total_visting_outlate 
 					FROM outletactivity a 
 					JOIN outlets o ON a.outletid = o.id 
-					WHERE a.userid = '$employee' AND a.activitydate = '$selectdate' AND a.activitytype  IN ('Outlet Visit', 'New Outlet Create')  AND o.areaid = '$area'
-				")) ?: ['total_visting_outlate' => 0];
+					WHERE a.userid='$employee' AND a.activitydate='$selectdate' AND a.activitytype IN ('Outlet Visit', 'New Outlet Create') AND o.areaid='$area'
+				"))['total_visting_outlate'];
 
-				// Booking
-				$booking = mysqli_fetch_assoc(mysqli_query($con, "
-					SELECT COUNT( DISTINCT outlet_id) as productive_outlets, SUM(total_amount) as total_value_orders 
-					FROM booking 
-					WHERE user_id = '$employee' AND DATE(booking_time) = '$selectdate'
-				")) ?: ['productive_outlets' => 0, 'total_value_orders' => 0];
+				// Bookings per area
+				$bRes = mysqli_fetch_assoc(mysqli_query($con, "
+					SELECT count(DISTINCT b.outlet_id) as productive_outlets, sum(b.total_amount) as total_value_orders 
+					FROM booking b
+					INNER JOIN outlets o ON b.outlet_id = o.id
+					WHERE b.user_id='$employee' AND DATE(b.booking_time)='$selectdate' AND o.areaid='$area'
+				"));
 
-				// Calculations
-				$newTotalOulets = $totalOutelate['total_outelate'] + $newTotalOutelate['new_total_outelate'];
-				$visitedOutlets = $totalVistingOutlate['total_visting_outlate'];
-				$outletsNotVisited = ($newTotalOulets - $visitedOutlets);
+				$newTotal = $totalOutelate + $newTotalOutelate;
+				$notVisited = max(0, $newTotal - $totalVistingOutlate);
+				$productivePct = ($newTotal > 0)
+					? round(($bRes['productive_outlets'] / $newTotal) * 100, 2)
+					: 0;
 
-				$productivePercentage = ($newTotalOulets > 0)
-					? round(($booking['productive_outlets'] / $newTotalOulets) * 100)
-					: 0.0;
-
-				$visitDetails[$area] = [
-					'area_name' => $areaName,
-					'total_outlets_on_route' => $totalOutelate['total_outelate'],
-					'new_outlet_made' => $newTotalOutelate['new_total_outelate'],
-					'new_total_oulets' => $newTotalOulets,
-					'No_of_outlets_visited' => $visitedOutlets,
-					'productive_outlets' => $booking['productive_outlets'],
-					'outlets_not_visited' => $outletsNotVisited,
-					'productive_percentage' => $productivePercentage,
-					'total_value_orders' => $booking['total_value_orders'],
+				$visitDetails[] = [
+					'area_name'                 => $areaName,
+					'total_outlets_on_route'    => (int)$totalOutelate,
+					'new_outlet_made'           => (int)$newTotalOutelate,
+					'new_total_oulets'          => (int)$newTotal,
+					'No_of_outlets_visited'     => (int)$totalVistingOutlate,
+					'productive_outlets'        => (int)($bRes['productive_outlets'] ?? 0),
+					'outlets_not_visited'       => (int)$notVisited,
+					'productive_percentage'     => $productivePct,
+					'total_value_orders'        => (float)($bRes['total_value_orders'] ?? 0)
 				];
 			}
 
-				// Output table row
+			// If no specific routes were visited, show single-row day summary
+			if (empty($visitDetails)) {
+				$visitDetails[] = [
+					'area_name'                 => '',
+					'total_outlets_on_route'    => 0,
+					'new_outlet_made'           => 0,
+					'new_total_oulets'          => 0,
+					'No_of_outlets_visited'     => 0,
+					'productive_outlets'        => 0,
+					'outlets_not_visited'       => 0,
+					'productive_percentage'     => 0,
+					'total_value_orders'        => 0
+				];
+			}
+
+			// Build HTML for the date row
+			if (!empty($visitDetails)) {
 				$rowData .= "<tr>";
 				$rowData .= "<td>";
-
-				$day = date('l', strtotime($dd));
-				if ($day == "Sunday") {
-					$sunday++;
-					$rowData .= date('d-M-Y', strtotime($dd)) . " " . $day;
+				$isToday = ($selectdate == date('Y-m-d'));
+				if ($isToday) {
+					$rowData .= "<a href='daly-report-os?id=" . urlencode($employee) . "'>" . date('d-M-Y', strtotime($dd)) . "</a>";
 				} else {
 					$rowData .= date('d-M-Y', strtotime($dd));
 				}
 				$rowData .= "</td>";
+				
+				$day = date('l', strtotime($dd));
 				$rowData .= "<td> $day </td>";
 
 				// Start time
@@ -362,6 +448,9 @@ $dsVisitTimes=[];
 				} elseif (isset($dsVisitList[$employee][$selectdate])) {
 					$workingday++;
 					$rowData .= "Distributor Visit";
+				} elseif (isset($adminVisitList[$employee][$selectdate])) {
+					$workingday++;
+					$rowData .= "Admin Visit";
 				} else {
 					if ($day != "Sunday") $leave++;
 					$rowData .= "Leave";
@@ -375,6 +464,8 @@ $dsVisitTimes=[];
 					$rowData .= date('h:i:s A', $endtimeStamp);
 				} elseif (isset($dsVisitList[$employee][$selectdate])) {
 					$rowData .= "Distributor Visit";
+				} elseif (isset($adminVisitList[$employee][$selectdate])) {
+					$rowData .= "Admin Visit";
 				} else {
 					$rowData .= "Leave";
 				}
@@ -477,8 +568,47 @@ $dsVisitTimes=[];
 				}
 							
 				$rowData .= "<td>" .$dsVistedStatus. "</td>";
+
+				$adminVisitStatus = "";
+				if (isset($adminVisitList[$employee][$selectdate])) {
+					$adminVisitStatus .= "<div style='font-size: 12px; line-height: 1.4; text-align: left;'>";
+					foreach ($adminVisitList[$employee][$selectdate] as $aIdx => $av) {
+						if ($aIdx > 0) {
+							$adminVisitStatus .= "<hr style='margin: 6px 0; border-color: #ddd;'/>";
+						}
+						$catId = (int)$av['reason_category'];
+						$inTimeFormatted = !empty($av['in_time']) ? date('h:i A', strtotime($av['in_time'])) : 'N/A';
+						$outTimeFormatted = !empty($av['out_time']) ? date('h:i A', strtotime($av['out_time'])) : 'N/A';
+
+						if ($catId === 1) {
+							$prod = !empty($av['products_currently_distributed']) ? $av['products_currently_distributed'] : (!empty($av['areas_covered']) ? $av['areas_covered'] : 'N/A');
+							$adminVisitStatus .= "<strong>New Distributor Search</strong><br/>";
+							$adminVisitStatus .= "<strong>Company Name:</strong> " . htmlspecialchars($av['company_name'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>City:</strong> " . htmlspecialchars($av['city'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>Products Currently Distributed:</strong> " . htmlspecialchars($prod) . "<br/>";
+							$adminVisitStatus .= "<strong>In Time :</strong> " . htmlspecialchars($inTimeFormatted) . "<br/>";
+							$adminVisitStatus .= "<strong>Out Time :</strong> " . htmlspecialchars($outTimeFormatted);
+						} elseif ($catId === 3) {
+							$adminVisitStatus .= "<strong>Miscellaneous Visit</strong><br/>";
+							$adminVisitStatus .= "<strong>Company Name:</strong> " . htmlspecialchars($av['company_name'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>City:</strong> " . htmlspecialchars($av['city'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>Reason for Visit:</strong> " . htmlspecialchars($av['visit_reason'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>In Time :</strong> " . htmlspecialchars($inTimeFormatted) . "<br/>";
+							$adminVisitStatus .= "<strong>Out Time :</strong> " . htmlspecialchars($outTimeFormatted);
+						} else {
+							$adminVisitStatus .= "<strong>New Distributor KYC</strong><br/>";
+							$adminVisitStatus .= "<strong>Company Name:</strong> " . htmlspecialchars($av['company_name'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>City:</strong> " . htmlspecialchars($av['city'] ?: 'N/A') . "<br/>";
+							$adminVisitStatus .= "<strong>In Time :</strong> " . htmlspecialchars($inTimeFormatted) . "<br/>";
+							$adminVisitStatus .= "<strong>Out Time :</strong> " . htmlspecialchars($outTimeFormatted);
+						}
+					}
+					$adminVisitStatus .= "</div>";
+				}
+				$rowData .= "<td>" . $adminVisitStatus . "</td>";
 				$rowData .= "</tr>";
 			}
+		}
 
 
 
@@ -506,14 +636,14 @@ $dsVisitTimes=[];
        		$data="<table id='userstable' border='1' cellpadding='10' cellspacing='0' class='table'  data-processing='true' data-filtering='true' data-sorting='true'>
            
               <tr>
-                <th colspan='6'>Employee Name : $name </th><th colspan='11'> Total Days Reported for Work : $workingday </th>
+                <th colspan='6'>Employee Name : $name </th><th colspan='12'> Total Days Reported for Work : $workingday </th>
               </tr>
               <tr>
-			   <th colspan='6'> Selected Period : $Period  </th> <th colspan='11'>  </th>
+			   <th colspan='6'> Selected Period : $Period  </th> <th colspan='12'>  </th>
 			  </tr>
 		
 			  <tr>
-			   <th colspan='6'>  </th><th colspan='4'></th> <th colspan='7'></th>
+			   <th colspan='6'>  </th><th colspan='4'></th> <th colspan='8'></th>
 			  </tr>                                          
               <tr>
 			    <th>Date</th>
@@ -531,6 +661,7 @@ $dsVisitTimes=[];
 				<th>Productive Call %</th>
 				<th>Total Value of Orders</th>
 				<th>Name of Distributors Visited</th>
+				<th>Admin Visit</th>
 
 			  </tr>";
 
@@ -557,6 +688,7 @@ $dsVisitTimes=[];
 					<th>".$totaloutletsNotVisited."</th>
 					<th>".$avgTotalProductivePercentage."%</th>
 					<th>".$totalProductivValueOrders."</th>
+					<th> </th>
 					<th> </th>
 				</tr>";		  
 			$data.="</table>";

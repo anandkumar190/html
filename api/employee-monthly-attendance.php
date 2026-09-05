@@ -182,6 +182,77 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
     }
     $visitStmt->close();
 
+    // 1b. Fetch all administrative visits in this range
+    $adminVisitList = [];
+    $adminVisitTimes = [];
+
+    $adminStmt = $con->prepare("
+        SELECT 
+            av.id,
+            av.user_id,
+            DATE(av.in_time) AS visit_date,
+            av.in_time,
+            av.out_time,
+            av.company_name,
+            av.city,
+            av.address,
+            av.pin_code,
+            av.contact_person,
+            av.cell_no,
+            av.reason_category,
+            av.visit_reason,
+            av.status,
+            sd.areas_covered,
+            sd.products_currently_distributed,
+            sd.gt_stores_covered,
+            sd.mt_stores_covered,
+            sd.wholesalers_covered,
+            sd.horeca_covered
+        FROM administrative_visit av
+        LEFT JOIN new_distributor_search_details sd ON av.id = sd.administrative_visit_id
+        WHERE av.user_id = ?
+        AND DATE(av.in_time) BETWEEN ? AND ?
+        ORDER BY av.in_time ASC
+    ");
+
+    $adminStmt->bind_param("iss", $employeeId, $startDate, $endDate);
+    $adminStmt->execute();
+    $adminVisitsRes = $adminStmt->get_result();
+
+    $periodAdminTotal = 0;
+    $periodAdminSearch = 0;
+    $periodAdminKyc = 0;
+    $periodAdminMisc = 0;
+
+    while ($av = $adminVisitsRes->fetch_assoc()) {
+        $vDate = $av['visit_date'];
+        $adminVisitList[$vDate][] = $av;
+        $periodAdminTotal++;
+
+        $catId = (int)$av['reason_category'];
+        if ($catId === 1) $periodAdminSearch++;
+        elseif ($catId === 2) $periodAdminKyc++;
+        elseif ($catId === 3) $periodAdminMisc++;
+
+        $inTs = !empty($av['in_time']) ? strtotime($av['in_time']) : 0;
+        $outTs = !empty($av['out_time']) ? strtotime($av['out_time']) : $inTs;
+
+        if (!isset($adminVisitTimes[$vDate])) {
+            $adminVisitTimes[$vDate] = [
+                'min' => $inTs,
+                'max' => $outTs
+            ];
+        } else {
+            if ($inTs > 0 && ($adminVisitTimes[$vDate]['min'] == 0 || $inTs < $adminVisitTimes[$vDate]['min'])) {
+                $adminVisitTimes[$vDate]['min'] = $inTs;
+            }
+            if ($outTs > 0 && ($adminVisitTimes[$vDate]['max'] == 0 || $outTs > $adminVisitTimes[$vDate]['max'])) {
+                $adminVisitTimes[$vDate]['max'] = $outTs;
+            }
+        }
+    }
+    $adminStmt->close();
+
     // 2. Iterate dates
     $dates = getDatesFromRange($startDate, $endDate);
     $totalDaysCount = count($dates);
@@ -251,6 +322,19 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
             }
         }
 
+        // Check for administrative visit timings on this date
+        if (isset($adminVisitTimes[$selectdate])) {
+            $admMin = $adminVisitTimes[$selectdate]['min'];
+            $admMax = $adminVisitTimes[$selectdate]['max'];
+
+            if ($admMin > 0 && ($starttimeStamp === 0 || $admMin < $starttimeStamp)) {
+                $starttimeStamp = $admMin;
+            }
+            if ($admMax > 0 && ($endtimeStamp === 0 || $admMax > $endtimeStamp)) {
+                $endtimeStamp = $admMax;
+            }
+        }
+
         // Calculate working hours
         if ($starttimeStamp > 0 && $endtimeStamp > 0) {
             $diffSeconds = abs($endtimeStamp - $starttimeStamp);
@@ -280,6 +364,11 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
             $dayStatus = 'Distributor Visit';
             $firstCallFormatted = 'Distributor Visit';
             $lastCallFormatted = 'Distributor Visit';
+        } elseif (isset($adminVisitList[$selectdate])) {
+            $workingDaysCount++;
+            $dayStatus = 'Admin Visit';
+            $firstCallFormatted = 'Admin Visit';
+            $lastCallFormatted = 'Admin Visit';
         } else {
             if ($isSunday) {
                 $sundayCount++;
@@ -375,8 +464,8 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
 
             // 4. Bookings for this area
             $areaBooking = $bookingsByArea[$areaId] ?? [
-                'productive_outlets' => (int)($globalDailyBooking['productive_outlets'] ?? 0),
-                'total_value_orders' => (float)($globalDailyBooking['total_value_orders'] ?? 0)
+                'productive_outlets' => 0,
+                'total_value_orders' => 0.0
             ];
 
             $newTotalOutlets = $totalOutletsOnRoute + $newOutletMade;
@@ -426,6 +515,81 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
         $totalProductivePercentage += $dayProductivePercentage;
         $totalOrderValue += $dayOrderValue;
 
+        // Build Administrative Visits for this day
+        $dayAdminVisits = [];
+        $dayAdminSummary = [];
+
+        if (isset($adminVisitList[$selectdate])) {
+            foreach ($adminVisitList[$selectdate] as $av) {
+                $catId = (int)$av['reason_category'];
+                $inTimeFmt = !empty($av['in_time']) ? date('h:i A', strtotime($av['in_time'])) : 'N/A';
+                $outTimeFmt = !empty($av['out_time']) ? date('h:i A', strtotime($av['out_time'])) : 'N/A';
+
+                if ($catId === 1) {
+                    $prod = !empty($av['products_currently_distributed']) 
+                        ? $av['products_currently_distributed'] 
+                        : (!empty($av['areas_covered']) ? $av['areas_covered'] : 'N/A');
+
+                    $outputLine = 'New Distributor Search - "' . $av['company_name'] . '" "' . $av['city'] . '" "' . $prod . '" "In Time : ' . $inTimeFmt . '" "Out Time : ' . $outTimeFmt . '"';
+
+                    $dayAdminVisits[] = [
+                        'id'                             => (int)$av['id'],
+                        'visit_type'                     => 'New Distributor Search',
+                        'reason_category'                => 1,
+                        'company_name'                   => $av['company_name'],
+                        'city'                           => $av['city'],
+                        'products_currently_distributed' => $prod,
+                        'areas_covered'                  => $av['areas_covered'] ?? '',
+                        'in_time'                        => $av['in_time'],
+                        'in_time_formatted'              => $inTimeFmt,
+                        'out_time'                       => $av['out_time'],
+                        'out_time_formatted'             => $outTimeFmt,
+                        'gt_stores_covered'              => (int)($av['gt_stores_covered'] ?? 0),
+                        'mt_stores_covered'              => (int)($av['mt_stores_covered'] ?? 0),
+                        'wholesalers_covered'            => (int)($av['wholesalers_covered'] ?? 0),
+                        'horeca_covered'                 => (int)($av['horeca_covered'] ?? 0),
+                        'output_text'                    => $outputLine
+                    ];
+                    $dayAdminSummary[] = $outputLine;
+                } elseif ($catId === 3) {
+                    $reason = !empty($av['visit_reason']) ? $av['visit_reason'] : 'N/A';
+                    $outputLine = 'Miscellaneous Visit - "' . $av['company_name'] . '" "' . $av['city'] . '" "Reason for Visit: ' . $reason . '" "In Time : ' . $inTimeFmt . '" "Out Time : ' . $outTimeFmt . '"';
+
+                    $dayAdminVisits[] = [
+                        'id'                 => (int)$av['id'],
+                        'visit_type'         => 'Miscellaneous Visit',
+                        'reason_category'    => 3,
+                        'company_name'       => $av['company_name'],
+                        'city'               => $av['city'],
+                        'reason_for_visit'   => $reason,
+                        'visit_reason'       => $reason,
+                        'in_time'            => $av['in_time'],
+                        'in_time_formatted'  => $inTimeFmt,
+                        'out_time'           => $av['out_time'],
+                        'out_time_formatted' => $outTimeFmt,
+                        'output_text'        => $outputLine
+                    ];
+                    $dayAdminSummary[] = $outputLine;
+                } else {
+                    $outputLine = 'New Distributor KYC - "' . $av['company_name'] . '" "' . $av['city'] . '" "In Time : ' . $inTimeFmt . '" "Out Time : ' . $outTimeFmt . '"';
+
+                    $dayAdminVisits[] = [
+                        'id'                 => (int)$av['id'],
+                        'visit_type'         => 'New Distributor KYC',
+                        'reason_category'    => 2,
+                        'company_name'       => $av['company_name'],
+                        'city'               => $av['city'],
+                        'in_time'            => $av['in_time'],
+                        'in_time_formatted'  => $inTimeFmt,
+                        'out_time'           => $av['out_time'],
+                        'out_time_formatted' => $outTimeFmt,
+                        'output_text'        => $outputLine
+                    ];
+                    $dayAdminSummary[] = $outputLine;
+                }
+            }
+        }
+
         $dailyRecords[] = [
             'date'               => $selectdate,
             'formatted_date'     => $formattedDate,
@@ -438,6 +602,8 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
             'working_minutes'    => $workingMinutes,
             'routes_visited'     => $routesVisited,
             'distributor_visits' => $dsVisitList[$selectdate] ?? [],
+            'admin_visits'       => $dayAdminVisits,
+            'admin_visit_output' => !empty($dayAdminSummary) ? implode(' ~ ', $dayAdminSummary) : '',
             'day_totals'         => [
                 'total_outlets_on_route' => $dayOutletsOnRoute,
                 'new_outlet_made'        => $dayNewOutlets,
@@ -488,7 +654,11 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
             'total_productive_outlets'    => $totalProductiveOutlets,
             'total_outlets_not_visited'   => $totalOutletsNotVisited,
             'avg_productive_percentage'   => $avgTotalProductivePercentage,
-            'total_order_value'           => round($totalOrderValue, 2)
+            'total_order_value'           => round($totalOrderValue, 2),
+            'total_admin_visits'          => $periodAdminTotal,
+            'admin_new_search_visits'     => $periodAdminSearch,
+            'admin_kyc_visits'            => $periodAdminKyc,
+            'admin_misc_visits'           => $periodAdminMisc
         ],
         'attendance_records' => $dailyRecords
     ];
