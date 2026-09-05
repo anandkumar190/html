@@ -102,31 +102,17 @@
               </div>
             </div>
             <!-- /.box-header -->
-            <div class="box-body table-responsive no-padding">
-              
-                <!-- Row -->
-                <div class="row">
-                  <div class="col-sm-12">
-                    <div class="panel panel-default card-view">
-                      
-                        <div class="panel-wrapper collapse in">
-                            <div class="panel-body">
-                                <div style="margin-bottom: 10px;">
-    <button class="btn btn-primary" onclick="printTable()">🖨️ Print Table</button>
-    <button class="btn btn-success" onclick="downloadCSV()">📥 Download CSV</button>
-  </div>
+            <div class="box-body" style="padding: 8px 10px;">
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="printTable()"><i class="fa fa-print"></i> 🖨️ Print (Fit to Sheet)</button>
+                        <button type="button" class="btn btn-sm btn-success" onclick="downloadCSV()"><i class="fa fa-download"></i> 📥 Download CSV</button>
+                    </div>
 
-                              <div class="table-wrap" id="responseDiv">	
-                              </div>
+                </div>
 
-                          </div>			<!-- /panel-body -->
-                      </div>			<!-- /panel-wrapper -->
-                      
-                    </div>			<!-- /Row -->
-                  </div>			<!-- /Row -->
-                </div>			<!-- /Row --> 
-                <!-- /Row -->
-              
+                <div class="table-responsive" id="responseDiv" style="border: none; overflow-x: auto;">	
+                </div>
             </div>
             <!-- /.box-body -->
           </div>
@@ -261,21 +247,34 @@ $(document).ready(function() {
 </script>
 
 <script>
-// PRINT FUNCTION
+// PRINT FUNCTION (Optimized for single-sheet landscape printing)
 function printTable() {
     const tableDiv = document.getElementById("responseDiv");
     if (!tableDiv || !tableDiv.innerHTML.trim()) {
         alert("No table data to print.");
         return;
     }
-    const newWin = window.open("");
-    newWin.document.write('<html><head><title>Print</title>');
-    newWin.document.write('<style>table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }</style>');
-    newWin.document.write('</head><body>');
+    const newWin = window.open("", "_blank");
+    newWin.document.write('<!DOCTYPE html><html><head><title>Monthly Attendance Report</title>');
+    newWin.document.write('<style>');
+    newWin.document.write('@page { size: A4 landscape; margin: 5mm 4mm; }');
+    newWin.document.write('* { box-sizing: border-box; }');
+    newWin.document.write('body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 2px; color: #111; font-size: 8pt; background: #fff; }');
+    newWin.document.write('table { width: 100% !important; border-collapse: collapse !important; font-size: 8pt !important; table-layout: auto !important; }');
+    newWin.document.write('tr { page-break-inside: avoid; }');
+    newWin.document.write('th, td { border: 1px solid #555 !important; padding: 2px 2px !important; line-height: 1.15 !important; }');
+    newWin.document.write('th { background-color: #eee !important; font-weight: bold !important; text-align: center !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }');
+    newWin.document.write('td.col-num { text-align: right !important; white-space: nowrap !important; }');
+    newWin.document.write('td.col-nowrap { text-align: center !important; white-space: nowrap !important; }');
+    newWin.document.write('.label { border: 1px solid #888; padding: 0 2px; font-size: 7pt; border-radius: 2px; }');
+    newWin.document.write('</style></head><body>');
     newWin.document.write(tableDiv.innerHTML);
     newWin.document.write('</body></html>');
     newWin.document.close();
-    newWin.print();
+    setTimeout(function() {
+        newWin.focus();
+        newWin.print();
+    }, 250);
 }
 
 // CSV DOWNLOAD FUNCTION

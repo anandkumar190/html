@@ -258,7 +258,7 @@ $dsVisitTimes=[];
 			$starttime = 0;
 			$endtime = 0;
 			$totalWorkingdays=$workingdays=$workinghours = 0;
-			$workingTime = '0 Hrs 0 Mins';
+			$workingTime = '-';
             $workingMinuts  = 0.0;
 
 			$visitDetails = [];
@@ -320,8 +320,8 @@ $dsVisitTimes=[];
 				$hours       = floor($diffSeconds / 3600);
 				$minutes     = floor(($diffSeconds % 3600) / 60);
 
-				// Human–readable
-				$workingTime = sprintf('%d Hrs %d Mins', $hours, $minutes);
+				// Compact format (e.g. 4h 30m)
+				$workingTime = sprintf('%dh %dm', $hours, $minutes);
 
 				// Decimal for summing
 				$workingMinuts = ($hours*60) + $minutes ;
@@ -427,180 +427,186 @@ $dsVisitTimes=[];
 			// Build HTML for the date row
 			if (!empty($visitDetails)) {
 				$rowData .= "<tr>";
-				$rowData .= "<td>";
+				$rowData .= "<td class='col-nowrap'>";
 				$isToday = ($selectdate == date('Y-m-d'));
+				$formattedDate = date('d-M', strtotime($dd));
 				if ($isToday) {
-					$rowData .= "<a href='daly-report-os?id=" . urlencode($employee) . "'>" . date('d-M-Y', strtotime($dd)) . "</a>";
+					$rowData .= "<a href='daly-report-os?id=" . urlencode($employee) . "'><strong>" . $formattedDate . "</strong></a>";
 				} else {
-					$rowData .= date('d-M-Y', strtotime($dd));
+					$rowData .= $formattedDate;
 				}
 				$rowData .= "</td>";
 				
 				$day = date('l', strtotime($dd));
-				$rowData .= "<td> $day </td>";
+				$dayShort = date('D', strtotime($dd));
+				$rowData .= "<td class='col-nowrap'> $dayShort </td>";
 
 				// Start time
-				$rowData .= "<td>";
+				$rowData .= "<td class='col-nowrap'>";
 				if ($starttimeStamp > 0) {
 					$starttimearray[] = $starttimeStamp;
 					$workingday++;
-					$rowData .= date('h:i:s A', $starttimeStamp);
+					$rowData .= date('h:i A', $starttimeStamp);
 				} elseif (isset($dsVisitList[$employee][$selectdate])) {
 					$workingday++;
-					$rowData .= "Distributor Visit";
+					$rowData .= "<span class='label label-info' style='font-size:9.5px; padding:1px 3px;'>Dist Visit</span>";
 				} elseif (isset($adminVisitList[$employee][$selectdate])) {
 					$workingday++;
-					$rowData .= "Admin Visit";
+					$rowData .= "<span class='label label-primary' style='font-size:9.5px; padding:1px 3px;'>Admin Visit</span>";
 				} else {
 					if ($day != "Sunday") $leave++;
-					$rowData .= "Leave";
+					$rowData .= "<span class='text-muted' style='font-size:10px;'>Leave</span>";
 				}
 				$rowData .= "</td>";
 
 				// End time
-				$rowData .= "<td>";
+				$rowData .= "<td class='col-nowrap'>";
 				if ($endtimeStamp > 0) {
 					$endtimearray[] = $endtimeStamp;
-					$rowData .= date('h:i:s A', $endtimeStamp);
+					$rowData .= date('h:i A', $endtimeStamp);
 				} elseif (isset($dsVisitList[$employee][$selectdate])) {
-					$rowData .= "Distributor Visit";
+					$rowData .= "<span class='label label-info' style='font-size:9.5px; padding:1px 3px;'>Dist Visit</span>";
 				} elseif (isset($adminVisitList[$employee][$selectdate])) {
-					$rowData .= "Admin Visit";
+					$rowData .= "<span class='label label-primary' style='font-size:9.5px; padding:1px 3px;'>Admin Visit</span>";
 				} else {
-					$rowData .= "Leave";
+					$rowData .= "<span class='text-muted' style='font-size:10px;'>Leave</span>";
 				}
 				$rowData .= "</td>";
 
-				$rowData .= "<td>{$workingTime}</td>";
+				$rowData .= "<td class='col-nowrap'>{$workingTime}</td>";
 
 				// Sum using the decimal value
 				$totalMinuts += $workingMinuts;
-				// Visit details table inside a cell
 
 				// 1. Area Name(s)
 				$rowData .= "<td>";
 				foreach ($visitDetails as $vv) {
-					$rowData .= $vv['area_name'] . "<br>";
+					$rowData .= (!empty($vv['area_name']) ? htmlspecialchars($vv['area_name']) : '-') . "<br>";
 				}
-				$rowData .= "  </td>";
+				$rowData .= "</td>";
 
 				// 2. Total Outlets on Route
-				$rowData .= "<td>";
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['total_outlets_on_route'] . "<br>";
-					$totalold+=$vv['total_outlets_on_route'];
+					$totalold += $vv['total_outlets_on_route'];
 				}
-				$rowData .= " </td>";
+				$rowData .= "</td>";
 
 				// 3. New Outlet Made
-				$rowData .= "<td>";
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['new_outlet_made'] . "<br>";
-					$totalnew+=$vv['new_outlet_made'];
+					$totalnew += $vv['new_outlet_made'];
 				}
-				$rowData .= "  </td>";
+				$rowData .= "</td>";
 
-				// 4. New Total Outlets
-				$rowData .= "<td>";
+				// 4. Total Outlets
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['new_total_oulets'] . "<br>";
 				}
-				$rowData .= "  </td>";
+				$rowData .= "</td>";
 
-
-					// 4. New Total Outlets
-				$rowData .= "<td>";
+				// 5. Visited Outlets
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['No_of_outlets_visited'] . "<br>";
-					$totalothervisit+=$vv['No_of_outlets_visited'];
+					$totalothervisit += $vv['No_of_outlets_visited'];
 				}
-				$rowData .= "  </td>";
+				$rowData .= "</td>";
 
-
-
-				// 5. Productive Outlets
-				$rowData .= "<td>";
+				// 6. Productive Outlets
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['productive_outlets'] . "<br>";
-					$productivOutlets+=$vv['productive_outlets'];
+					$productivOutlets += $vv['productive_outlets'];
 				}
-				$rowData .= " </td>";
+				$rowData .= "</td>";
 
-
-
-				
-				// 6. Outlets Not Visited
-				$rowData .= "<td>";
+				// 7. Outlets Not Visited
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['outlets_not_visited'] . "<br>";
-					$totaloutletsNotVisited+=$vv['outlets_not_visited'];
+					$totaloutletsNotVisited += $vv['outlets_not_visited'];
 				}
-				$rowData .= "  </td>";
+				$rowData .= "</td>";
 
-				// 7. Productive Percentage
-				$rowData .= "<td>";
+				// 8. Productive Percentage
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
 					$rowData .= $vv['productive_percentage'] . "%<br>";
-					$totalProductivePercentage+=$vv['productive_percentage'];
+					$totalProductivePercentage += $vv['productive_percentage'];
 				}
 				$rowData .= "</td>";
 
-				// 8. Total Order Value
-				$rowData .= "<td>";
+				// 9. Total Order Value
+				$rowData .= "<td class='col-num'>";
 				foreach ($visitDetails as $vv) {
-					$rowData .= $vv['total_value_orders'] . "<br>";
-					$totalProductivValueOrders+=$vv['total_value_orders'];
+					$rowData .= ($vv['total_value_orders'] > 0 ? number_format($vv['total_value_orders'], 2) : '-') . "<br>";
+					$totalProductivValueOrders += $vv['total_value_orders'];
 				}
 				$rowData .= "</td>";
+
+				// 10. Distributor Visits
 				$dsVistedStatus = "";
 				if (isset($dsVisitList[$employee][$selectdate])) {
-					$dsVistedStatus .= "<div style='font-size: 12px; line-height: 1.4; text-align: left;'>";
+					$dsVistedStatus .= "<div class='compact-cell-item'>";
 					foreach ($dsVisitList[$employee][$selectdate] as $index => $v) {
 						if ($index > 0) {
-							$dsVistedStatus .= "<hr style='margin: 6px 0; border-color: #ddd;'/>";
+							$dsVistedStatus .= "<hr style='margin:3px 0; border-color:#eee;'/>";
 						}
-						$formattedTime = $v['time'] ? date('h:i A', strtotime($v['time'])) : 'N/A';
-						$dsVistedStatus .= "<strong>Distributor:</strong> " . htmlspecialchars($v['distributor_name'] ?? 'N/A') . "<br/>";
-						$dsVistedStatus .= "<strong>Time:</strong> " . htmlspecialchars($formattedTime) . "<br/>";
-						$dsVistedStatus .= "<strong>Purpose:</strong> " . htmlspecialchars(($v['reason_type'] ?: '') . ($v['reason'] ? ' - ' . $v['reason'] : ''));
+						$formattedTime = $v['time'] ? date('h:i A', strtotime($v['time'])) : '';
+						$dsVistedStatus .= "<b>" . htmlspecialchars($v['distributor_name'] ?? 'N/A') . "</b>";
+						if (!empty($formattedTime)) {
+							$dsVistedStatus .= " <span class='text-muted' style='font-size:9.5px;'>(" . htmlspecialchars($formattedTime) . ")</span>";
+						}
+						$purpose = trim(($v['reason_type'] ?: '') . ($v['reason'] ? ' - ' . $v['reason'] : ''));
+						if (!empty($purpose)) {
+							$dsVistedStatus .= "<div style='color:#555; font-size:9.5px;'>" . htmlspecialchars($purpose) . "</div>";
+						}
 					}
 					$dsVistedStatus .= "</div>";
 				}
-							
-				$rowData .= "<td>" .$dsVistedStatus. "</td>";
+				$rowData .= "<td>" . $dsVistedStatus . "</td>";
 
+				// 11. Admin Visits
 				$adminVisitStatus = "";
 				if (isset($adminVisitList[$employee][$selectdate])) {
-					$adminVisitStatus .= "<div style='font-size: 12px; line-height: 1.4; text-align: left;'>";
+					$adminVisitStatus .= "<div class='compact-cell-item'>";
 					foreach ($adminVisitList[$employee][$selectdate] as $aIdx => $av) {
 						if ($aIdx > 0) {
-							$adminVisitStatus .= "<hr style='margin: 6px 0; border-color: #ddd;'/>";
+							$adminVisitStatus .= "<hr style='margin:3px 0; border-color:#eee;'/>";
 						}
 						$catId = (int)$av['reason_category'];
 						$inTimeFormatted = !empty($av['in_time']) ? date('h:i A', strtotime($av['in_time'])) : 'N/A';
 						$outTimeFormatted = !empty($av['out_time']) ? date('h:i A', strtotime($av['out_time'])) : 'N/A';
 
 						if ($catId === 1) {
-							$prod = !empty($av['products_currently_distributed']) ? $av['products_currently_distributed'] : (!empty($av['areas_covered']) ? $av['areas_covered'] : 'N/A');
-							$adminVisitStatus .= "<strong>New Distributor Search</strong><br/>";
-							$adminVisitStatus .= "<strong>Company Name:</strong> " . htmlspecialchars($av['company_name'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>City:</strong> " . htmlspecialchars($av['city'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>Products Currently Distributed:</strong> " . htmlspecialchars($prod) . "<br/>";
-							$adminVisitStatus .= "<strong>In Time :</strong> " . htmlspecialchars($inTimeFormatted) . "<br/>";
-							$adminVisitStatus .= "<strong>Out Time :</strong> " . htmlspecialchars($outTimeFormatted);
+							$prod = !empty($av['products_currently_distributed']) ? $av['products_currently_distributed'] : (!empty($av['areas_covered']) ? $av['areas_covered'] : '');
+							$adminVisitStatus .= "<span class='label label-success' style='font-size:9px; padding:1px 3px;'>Search</span> <b>" . htmlspecialchars($av['company_name'] ?: 'N/A') . "</b>";
+							if (!empty($av['city'])) {
+								$adminVisitStatus .= " <span class='text-muted' style='font-size:9.5px;'>(" . htmlspecialchars($av['city']) . ")</span>";
+							}
+							if (!empty($prod)) {
+								$adminVisitStatus .= "<div style='color:#555; font-size:9.5px;'><b>Prod:</b> " . htmlspecialchars($prod) . "</div>";
+							}
+							$adminVisitStatus .= "<div style='color:#777; font-size:9px;'>In: " . htmlspecialchars($inTimeFormatted) . " | Out: " . htmlspecialchars($outTimeFormatted) . "</div>";
 						} elseif ($catId === 3) {
-							$adminVisitStatus .= "<strong>Miscellaneous Visit</strong><br/>";
-							$adminVisitStatus .= "<strong>Company Name:</strong> " . htmlspecialchars($av['company_name'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>City:</strong> " . htmlspecialchars($av['city'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>Reason for Visit:</strong> " . htmlspecialchars($av['visit_reason'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>In Time :</strong> " . htmlspecialchars($inTimeFormatted) . "<br/>";
-							$adminVisitStatus .= "<strong>Out Time :</strong> " . htmlspecialchars($outTimeFormatted);
+							$adminVisitStatus .= "<span class='label label-warning' style='font-size:9px; padding:1px 3px;'>Misc</span> <b>" . htmlspecialchars($av['company_name'] ?: 'N/A') . "</b>";
+							if (!empty($av['city'])) {
+								$adminVisitStatus .= " <span class='text-muted' style='font-size:9.5px;'>(" . htmlspecialchars($av['city']) . ")</span>";
+							}
+							if (!empty($av['visit_reason'])) {
+								$adminVisitStatus .= "<div style='color:#555; font-size:9.5px;'><b>Reason:</b> " . htmlspecialchars($av['visit_reason']) . "</div>";
+							}
+							$adminVisitStatus .= "<div style='color:#777; font-size:9px;'>In: " . htmlspecialchars($inTimeFormatted) . " | Out: " . htmlspecialchars($outTimeFormatted) . "</div>";
 						} else {
-							$adminVisitStatus .= "<strong>New Distributor KYC</strong><br/>";
-							$adminVisitStatus .= "<strong>Company Name:</strong> " . htmlspecialchars($av['company_name'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>City:</strong> " . htmlspecialchars($av['city'] ?: 'N/A') . "<br/>";
-							$adminVisitStatus .= "<strong>In Time :</strong> " . htmlspecialchars($inTimeFormatted) . "<br/>";
-							$adminVisitStatus .= "<strong>Out Time :</strong> " . htmlspecialchars($outTimeFormatted);
+							$adminVisitStatus .= "<span class='label label-info' style='font-size:9px; padding:1px 3px;'>KYC</span> <b>" . htmlspecialchars($av['company_name'] ?: 'N/A') . "</b>";
+							if (!empty($av['city'])) {
+								$adminVisitStatus .= " <span class='text-muted' style='font-size:9.5px;'>(" . htmlspecialchars($av['city']) . ")</span>";
+							}
+							$adminVisitStatus .= "<div style='color:#777; font-size:9px;'>In: " . htmlspecialchars($inTimeFormatted) . " | Out: " . htmlspecialchars($outTimeFormatted) . "</div>";
 						}
 					}
 					$adminVisitStatus .= "</div>";
@@ -610,88 +616,134 @@ $dsVisitTimes=[];
 			}
 		}
 
+		$totalstime = 0;
+		$totaletime = 0;
+		foreach ($starttimearray as $stime) {
+			$totalstime += $stime;
+		}
+		foreach ($endtimearray as $etime) {
+			$totaletime += $etime;
+		}
 
+		$avgTotalMinuts = ($totalMinuts > 0 && $workingday > 0) ? floor($totalMinuts / $workingday) : 0;
+		$avgstarttime = (count($starttimearray) > 0 && $totalstime > 0) ? round($totalstime / count($starttimearray)) : 0;
+		$avgendtime = (count($endtimearray) > 0 && $totaletime > 0) ? round($totaletime / count($endtimearray)) : 0;
 
+		$avgHours = floor($avgTotalMinuts / 60);
+		$avgTotalProductivePercentage = ($workingday > 0 && $totalProductivePercentage > 0) ? floor($totalProductivePercentage / $workingday) : 0;
+		$avgMins = $avgTotalMinuts % 60;
+		$avgWorkingTimeFormatted = ($workingday > 0 && ($avgHours > 0 || $avgMins > 0)) ? ($avgHours . 'h ' . $avgMins . 'm') : '-';
+		$avgStartFormatted = ($avgstarttime > 0) ? date('h:i A', $avgstarttime) : '-';
+		$avgEndFormatted = ($avgendtime > 0) ? date('h:i A', $avgendtime) : '-';
 
-
-			  $totalstime=0;
-			  $totaletime=0;
-			  foreach($starttimearray as $stime)
-			  {
-				  $totalstime+=$stime;
-				  
-			  }
-			  
-			  foreach($endtimearray as $etime)
-			  {
-				  $totaletime+=$etime;
-				  
-			  }
-			  
-			  $avgTotalMinuts=($totalMinuts>0 and $workingday >0)?floor($totalMinuts/$workingday):0;
-			  $avgstarttime= (count($starttimearray)>0 and  $totalstime>0) ? round($totalstime/count($starttimearray)):0;
-			  $avgendtime= (count($endtimearray)>0 and  $totaletime>0) ? round($totaletime/count($endtimearray)):0;
-			  
-
-       		$data="<table id='userstable' border='1' cellpadding='10' cellspacing='0' class='table'  data-processing='true' data-filtering='true' data-sorting='true'>
-           
-              <tr>
-                <th colspan='6'>Employee Name : $name </th><th colspan='12'> Total Days Reported for Work : $workingday </th>
-              </tr>
-              <tr>
-			   <th colspan='6'> Selected Period : $Period  </th> <th colspan='12'>  </th>
-			  </tr>
-		
-			  <tr>
-			   <th colspan='6'>  </th><th colspan='4'></th> <th colspan='8'></th>
-			  </tr>                                          
-              <tr>
-			    <th>Date</th>
-			    <th>Day</th>
-			    <th>First Sales Call Time</th>
-			    <th>Last Sales Call Time</th>
-				<th>Working Time (Hrs.) </th>
-			    <th>Routes Visited</th>
-				<th>Total Outlets on Route</th>
-			    <th>New Outlet Made</th>
-			    <th>New Total Oulets</th>
-			    <th>No. of Outlets Visited</th>
-			    <th>Productive Outlets</th>
-				<th>Outlets Not Visited</th>
-				<th>Productive Call %</th>
-				<th>Total Value of Orders</th>
-				<th>Name of Distributors Visited</th>
-				<th>Admin Visit</th>
-
-			  </tr>";
-
-			$data.=$rowData;
-						
-			$avgHours = floor($avgTotalMinuts / 60);
-			$avgTotalProductivePercentage= ($workingday>0 and $totalProductivePercentage>0)?floor($totalProductivePercentage/$workingday):0;
-			$avgMins = $avgTotalMinuts % 60;
-
-	
-
-
-			$data.="<tr>
-					<th>Averages</th> <th> </th> 
-					<th>".date('H:i:s',$avgstarttime)."</th>
-					<th>".date('H:i:s',$avgendtime)."</th>
-					<th>".$avgHours . " Hrs " . $avgMins . " Mins </th>
-					<th>  </th> 
-					<th>".$totalold."</th>
-					<th>".$totalnew."</th>
-					<th>".($totalold+$totalnew)."</th>
-					<th>".$totalothervisit."</th>
-					<th>".$productivOutlets."</th>
-					<th>".$totaloutletsNotVisited."</th>
-					<th>".$avgTotalProductivePercentage."%</th>
-					<th>".$totalProductivValueOrders."</th>
-					<th> </th>
-					<th> </th>
-				</tr>";		  
-			$data.="</table>";
+		$data = "<style>
+		.compact-attendance-table {
+			width: 100% !important;
+			border-collapse: collapse !important;
+			font-size: 11px !important;
+			line-height: 1.25 !important;
+			background: #fff;
+		}
+		.compact-attendance-table th, 
+		.compact-attendance-table td {
+			padding: 3px 4px !important;
+			border: 1px solid #d2d6de !important;
+			vertical-align: middle !important;
+		}
+		.compact-attendance-table th {
+			background-color: #f4f6f9 !important;
+			color: #333 !important;
+			font-weight: 600 !important;
+			text-align: center !important;
+			white-space: nowrap !important;
+		}
+		.compact-attendance-table .col-nowrap {
+			white-space: nowrap !important;
+			text-align: center !important;
+		}
+		.compact-attendance-table .col-num {
+			white-space: nowrap !important;
+			text-align: right !important;
+		}
+		.compact-attendance-table tr:hover {
+			background-color: #f9fbfd !important;
+		}
+		.compact-cell-item {
+			font-size: 10px !important;
+			line-height: 1.2 !important;
+		}
+		@media print {
+			@page {
+				size: A4 landscape;
+				margin: 4mm;
+			}
+			body {
+				margin: 0 !important;
+				padding: 0 !important;
+				font-size: 8pt !important;
+			}
+			.compact-attendance-table {
+				font-size: 8pt !important;
+			}
+			.compact-attendance-table th, 
+			.compact-attendance-table td {
+				padding: 2px 2px !important;
+				border: 1px solid #555 !important;
+			}
+			.compact-attendance-table th {
+				background-color: #eee !important;
+			}
+		}
+		</style>
+		<table id='userstable' class='table table-bordered table-striped compact-attendance-table' data-processing='true' data-filtering='true' data-sorting='true'>
+		<thead>
+		  <tr style='background:#eef2f7;'>
+			<th colspan='6' style='text-align:left; font-size:12px;'><strong>Employee Name:</strong> $name</th>
+			<th colspan='10' style='text-align:right; font-size:12px;'><strong>Working Days:</strong> $workingday | <strong>Period:</strong> $Period</th>
+		  </tr>
+		  <tr>
+			<th title='Date'>Date</th>
+			<th title='Day'>Day</th>
+			<th title='First Sales Call Time'>First Call</th>
+			<th title='Last Sales Call Time'>Last Call</th>
+			<th title='Working Time'>Work Hrs</th>
+			<th title='Routes / Areas Visited'>Route / Area</th>
+			<th title='Total Outlets on Route'>Route Outlets</th>
+			<th title='New Outlets Made'>New Outlets</th>
+			<th title='Total Outlets (Route + New)'>Total Outlets</th>
+			<th title='Outlets Visited'>Visited</th>
+			<th title='Productive Outlets'>Productive</th>
+			<th title='Outlets Not Visited'>Unvisited</th>
+			<th title='Productive Percentage'>Prod %</th>
+			<th title='Total Value of Orders'>Order Val (₹)</th>
+			<th title='Name of Distributors Visited'>Distributor Visits</th>
+			<th title='Administrative Visits'>Admin Visits</th>
+		  </tr>
+		</thead>
+		<tbody>
+		$rowData
+		</tbody>
+		<tfoot>
+		  <tr style='background:#f4f6f9; font-weight:bold;'>
+			<th class='col-nowrap'>Averages</th>
+			<th></th>
+			<th class='col-nowrap'>$avgStartFormatted</th>
+			<th class='col-nowrap'>$avgEndFormatted</th>
+			<th class='col-nowrap'>$avgWorkingTimeFormatted</th>
+			<th></th>
+			<th class='col-num'>$totalold</th>
+			<th class='col-num'>$totalnew</th>
+			<th class='col-num'>" . ($totalold + $totalnew) . "</th>
+			<th class='col-num'>$totalothervisit</th>
+			<th class='col-num'>$productivOutlets</th>
+			<th class='col-num'>$totaloutletsNotVisited</th>
+			<th class='col-num'>$avgTotalProductivePercentage%</th>
+			<th class='col-num'>" . ($totalProductivValueOrders > 0 ? number_format($totalProductivValueOrders, 2) : '0.00') . "</th>
+			<th></th>
+			<th></th>
+		  </tr>
+		</tfoot>
+		</table>";
 
 
 			
