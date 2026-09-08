@@ -218,6 +218,20 @@
                 // icon: {
                 //   url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
                 // }
+    icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+                <path
+                    d="M16 0C7.16 0 0 7.16 0 16c0 12 16 29 16 29s16-17 16-29C32 7.16 24.84 0 16 0z"
+                    fill="#2196F3"
+                />
+                <circle cx="16" cy="16" r="6" fill="white"/>
+            </svg>
+        `),
+        scaledSize: new google.maps.Size(32, 45),
+        anchor: new google.maps.Point(16, 45)
+    }
+
               });
 
               (function(m, d) {
