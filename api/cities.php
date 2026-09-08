@@ -111,17 +111,23 @@ if(!isset($_SESSION['tittu']))
           $res=mysqli_query($con,$query);
 	      $response=array();
      
-		  $result=mysqli_query($con,"select r.city_id, COUNT( DISTINCT r.id) AS total_region_count , COUNT( DISTINCT o.id) AS total_outlet_count , COUNT( DISTINCT a.id) AS total_route_count from outlets o JOIN area a ON o.routeid=a.id JOIN regions r On a.region=r.id GROUP BY r.city_id");
-		  $outlets=mysqli_fetch_array($result);
-	 
+		  $result=mysqli_query($con,"select r.city_id,
+		   COUNT( DISTINCT r.id) AS total_region_count ,
+		    COUNT( DISTINCT o.id) AS total_outlet_count ,
+			COUNT( DISTINCT a.id) AS total_route_count from outlets o
+			JOIN area a ON o.routeid=a.id 
+			JOIN regions r On a.region=r.id 
+			GROUP BY r.city_id");
 		 $arrayReion=$arraylastvist= $arrayoutlate = array();
 		  while($outlets=mysqli_fetch_array($result))
 		  {
 
+		 
 			$arrayOutlet[$outlets['city_id']]=$outlets['total_outlet_count'];
 			$arrayRoute[$outlets['city_id']]=$outlets['total_route_count'];
 			$arrayReion[$outlets['city_id']]=$outlets['total_region_count'];
 		  }
+
 
 
 	 while($row=mysqli_fetch_array($res))
@@ -133,10 +139,13 @@ if(!isset($_SESSION['tittu']))
 				 "route_count"=>@$arrayRoute[$row["id"]]??0,
 				 "region_count"=>@$arrayReion[$row["id"]]??0
 				);
+
+
 		 $response[]=$rr;
      }
      
-  
+
+
 	 $data=json_encode($response);
 	 echo $data;
       
