@@ -287,7 +287,7 @@
 													<th> <h4><b> <?php echo $i ;?> </b></h4></th>
 												</tr>
                         <tr>
-                        <th> <h4><b> Total No. of Routes </b></h4></th>
+                        <th> <h4><b> Total No. of Outlets </b></h4></th>
 													<th> <h4><b> <?php echo $totalOutlets ;?> </b></h4></th>
 												</tr>
 												</tbody>
