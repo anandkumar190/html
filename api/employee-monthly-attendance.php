@@ -668,17 +668,11 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
 // Calculate Date Ranges for Last Month and Current Month
 // -------------------------------------------------------------
 
-// Last Two Months Range: 1st of two months ago to Last day of last month
-$lastMonthStart = date('Y-m-01', strtotime('first day of -2 month'));
-$lastMonthEnd   = date('Y-m-t', strtotime('last day of last month'));
-
-// Generates a label like "August - September 2026"
-$lastMonthLabel = date('F', strtotime('first day of -2 month')) . ' - ' . date('F Y', strtotime('first day of last month'));
 
 // Last Month Range: 1st of last month to Last day of last month
-// $lastMonthStart = date('Y-m-01', strtotime('first day of last month'));
-// $lastMonthEnd   = date('Y-m-t', strtotime('last day of last month'));
-// $lastMonthLabel = date('F Y', strtotime('first day of last month'));
+$lastMonthStart = date('Y-m-01', strtotime('first day of last month'));
+$lastMonthEnd   = date('Y-m-t', strtotime('last day of last month'));
+$lastMonthLabel = date('F Y', strtotime('first day of last month'));
 
 // Current Month Range: 1st of current month to Today (or full month)
 $currentMonthStart = date('Y-m-01');
