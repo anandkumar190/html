@@ -87,10 +87,12 @@ require("header.php");
                         <div class="form-group" style="margin-right: 10px; margin-bottom: 10px;">
                             <label style="display: block; font-size: 12px; margin-bottom: 3px;">Visit Category:</label>
                             <select class="form-control select2 input-sm" id="reason_category" name="reason_category" style="width: 190px;">
+                                <option value="1" selected>New Distributor</option>
+                                <!-- Temporarily commented out other categories
                                 <option value="">All Categories</option>
-                                <option value="1">1 - New Distributor Search</option>
                                 <option value="2">2 - New Distributor KYC</option>
                                 <option value="3">3 - Miscellaneous Visit</option>
+                                -->
                             </select>
                         </div>
 
@@ -141,9 +143,11 @@ require("header.php");
                         <!-- KPI Summary Badges -->
                         <div class="pull-left kpi-badges">
                             <span id="stat_total" class="badge bg-blue">Total Visits: 0</span>
-                            <span id="stat_cat1" class="badge bg-green">New Search: 0</span>
+                            <span id="stat_cat1" class="badge bg-green">New Distributor: 0</span>
+                            <!-- Temporarily commented out other category badges
                             <span id="stat_cat2" class="badge bg-aqua">KYC: 0</span>
                             <span id="stat_cat3" class="badge bg-yellow">Misc: 0</span>
+                            -->
                         </div>
                         
                         <div class="pull-right">
@@ -258,7 +262,7 @@ $(document).ready(function() {
     $('#btnreset').on('click', function() {
         $('#reservation').val('');
         $('#employee').val('').trigger('change');
-        $('#reason_category').val('').trigger('change');
+        $('#reason_category').val('1').trigger('change');
         $('#city').val('').trigger('change');
         $('#keyword').val('');
         loadVisitsData();
@@ -284,7 +288,7 @@ function loadVisitsData() {
     var params = {
         reservation: $('#reservation').val(),
         user_id: $('#employee').val(),
-        reason_category: $('#reason_category').val(),
+        reason_category: $('#reason_category').val() || '1',
         city: $('#city').val(),
         keyword: $('#keyword').val()
     };
@@ -302,9 +306,10 @@ function loadVisitsData() {
                 // Update KPI summary badges
                 var summary = response.summary || {};
                 $('#stat_total').text('Total Visits: ' + (summary.total_visits || 0));
-                $('#stat_cat1').text('New Search: ' + (summary.new_distributor_search || 0));
-                $('#stat_cat2').text('KYC: ' + (summary.new_distributor_kyc || 0));
-                $('#stat_cat3').text('Misc: ' + (summary.miscellaneous_visit || 0));
+                $('#stat_cat1').text('New Distributor: ' + (summary.new_distributor_search || 0));
+                // Temporarily commented out other category badges
+                // $('#stat_cat2').text('KYC: ' + (summary.new_distributor_kyc || 0));
+                // $('#stat_cat3').text('Misc: ' + (summary.miscellaneous_visit || 0));
 
                 initDataTable(visitsCache);
             } else {
@@ -363,12 +368,15 @@ function initDataTable(data) {
                 data: 'reason_category',
                 render: function(val, type, row) {
                     if (val === 1) {
-                        return '<span class="label label-success" style="font-size: 11px;">1 - New Search</span>';
-                    } else if (val === 2) {
+                        return '<span class="label label-success" style="font-size: 11px;">New Distributor</span>';
+                    }
+                    /* Temporarily commented out other categories
+                    else if (val === 2) {
                         return '<span class="label label-info" style="font-size: 11px;">2 - New KYC</span>';
                     } else if (val === 3) {
                         return '<span class="label label-warning" style="font-size: 11px;">3 - Miscellaneous</span>';
                     }
+                    */
                     return '<span class="label label-default">Unknown</span>';
                 }
             },
@@ -420,11 +428,14 @@ function initDataTable(data) {
                         pills += '<span class="store-pill">HoReCa: ' + sd.horeca_covered + '</span>';
                         var area = sd.areas_covered ? '<div style="font-size: 11px; color: #555; margin-top: 3px;"><em>' + sd.areas_covered.substring(0, 45) + (sd.areas_covered.length > 45 ? '...' : '') + '</em></div>' : '';
                         return pills + area;
-                    } else if (val === 3 && row.visit_reason) {
+                    }
+                    /* Temporarily commented out other categories
+                    else if (val === 3 && row.visit_reason) {
                         return '<span style="font-size: 11px; color: #555;">' + row.visit_reason.substring(0, 60) + (row.visit_reason.length > 60 ? '...' : '') + '</span>';
                     } else if (val === 2) {
                         return '<span class="text-muted" style="font-size: 11px;">Distributor KYC Record</span>';
                     }
+                    */
                     return '-';
                 }
             },
@@ -445,7 +456,8 @@ function initDataTable(data) {
 function renderVisitModal(v) {
     $('#modalTitle').html('<i class="fa fa-building-o"></i> Visit  - ' + v.company_name);
     
-    var categoryBadge = '';
+    var categoryBadge = '<span class="label label-success" style="font-size: 12px;">New Distributor</span>';
+    /* Temporarily commented out other categories
     if (v.reason_category === 1) {
         categoryBadge = '<span class="label label-success" style="font-size: 12px;">1 - New Distributor Search</span>';
     } else if (v.reason_category === 2) {
@@ -453,6 +465,7 @@ function renderVisitModal(v) {
     } else if (v.reason_category === 3) {
         categoryBadge = '<span class="label label-warning" style="font-size: 12px;">3 - Miscellaneous Visit</span>';
     }
+    */
 
     var html = '';
     html += '<div class="row">';
@@ -518,7 +531,9 @@ function renderVisitModal(v) {
 
         html += '</div>';
         html += '</div>';
-    } else if (v.reason_category === 3) {
+    }
+    /* Temporarily commented out other categories
+    else if (v.reason_category === 3) {
         html += '<div class="row" style="margin-top: 10px;">';
         html += '<div class="col-md-12">';
         html += '<h5 style="border-bottom: 2px solid #f39c12; padding-bottom: 5px; font-weight: 600;"><i class="fa fa-commenting-o text-yellow"></i> Miscellaneous Visit Reason</h5>';
@@ -528,6 +543,7 @@ function renderVisitModal(v) {
         html += '</div>';
         html += '</div>';
     }
+    */
 
     $('#modalContent').html(html);
     $('#detailModal').modal('show');

@@ -78,8 +78,8 @@ function getWordCount($str) {
 // Category Mapping
 $categoryMap = [
     1 => 'New Distributor Search',
-    2 => 'New Distributor KYC',
-    3 => 'Miscellaneous Visit'
+    // 2 => 'New Distributor KYC',     // Temporarily commented out
+    // 3 => 'Miscellaneous Visit'      // Temporarily commented out
 ];
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -149,9 +149,9 @@ if ($method === 'POST') {
         $gpsLatitude = (float)$gpsLatitude;
         $gpsLongitude = (float)$gpsLongitude;
 
-        // Validate reason_category
-        $rawCategory = $input['reason_category'] ?? $input['category'] ?? null;
-        $reasonCategory = null;
+        // Validate reason_category (Temporarily only Category 1: New Distributor Search)
+        $rawCategory = $input['reason_category'] ?? $input['category'] ?? 1;
+        $reasonCategory = 1;
 
         if (is_numeric($rawCategory) && isset($categoryMap[(int)$rawCategory])) {
             $reasonCategory = (int)$rawCategory;
@@ -162,6 +162,7 @@ if ($method === 'POST') {
             }
         }
 
+        /* Temporarily commented out other categories
         if ($reasonCategory === null || !in_array($reasonCategory, [1, 2, 3])) {
             echo json_encode([
                 "status" => 0,
@@ -170,8 +171,9 @@ if ($method === 'POST') {
             ], JSON_PRETTY_PRINT);
             exit();
         }
+        */
 
-        $categoryName = $categoryMap[$reasonCategory];
+        $categoryName = $categoryMap[$reasonCategory] ?? 'New Distributor Search';
         $gpsAddress = trim((string)($input['gps_address_autofilled'] ?? $input['gps_address'] ?? $input['address'] ?? ''));
         $inTime = !empty($input['in_time']) ? date('Y-m-d H:i:s', strtotime($input['in_time'])) : date('Y-m-d H:i:s');
         $visitType = !empty($input['visit_type']) ? trim((string)$input['visit_type']) : 'ADMINISTRATIVE';
@@ -555,6 +557,9 @@ if (!empty($filterCategory)) {
     $query .= " AND av.reason_category = ?";
     $params[] = (int)$filterCategory;
     $types .= "i";
+} else {
+    // Temporarily default to Category 1 (New Distributor) only
+    $query .= " AND av.reason_category = 1";
 }
 
 if (!empty($filterCity)) {
@@ -653,8 +658,8 @@ echo json_encode([
     "summary" => [
         "total_visits" => count($visits),
         "new_distributor_search" => $cat1Count,
-        "new_distributor_kyc" => $cat2Count,
-        "miscellaneous_visit" => $cat3Count
+        // "new_distributor_kyc" => $cat2Count,       // Temporarily commented out
+        // "miscellaneous_visit" => $cat3Count        // Temporarily commented out
     ],
     "data" => $visits
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
