@@ -541,7 +541,7 @@ $query = "
     FROM administrative_visit av
     LEFT JOIN employees e ON av.user_id = e.id
     LEFT JOIN new_distributor_search_details sd ON av.id = sd.administrative_visit_id
-    WHERE 1=1
+    WHERE av.address  IS NOT NULL AND TRIM(av.company_name)<>''
 ";
 
 $params = [];
