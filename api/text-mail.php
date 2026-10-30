@@ -112,7 +112,7 @@ try {
     $mail->SMTPAuth = true;
 
     $mail->Username   = 'vivanfoods2@gmail.com';
-    $mail->Password   = 'mxfbczbfrtobuaec';
+    $mail->Password   = 'srnjhqgepqmxzwqn';
 
 
     $mail->SMTPSecure =
