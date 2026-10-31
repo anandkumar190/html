@@ -5,6 +5,7 @@
  * Request Method: GET or POST (JSON or Form Data)
  * Parameters:
  *   - user_id (or userid / employee_id) [Required]: ID of the employee
+ *   - month / type [Optional]: 'current', 'last', 'both' (default: 'both')
  * 
  * Returns:
  *   JSON object containing employee details, last month summary & day-by-day records,
@@ -123,9 +124,13 @@ $stmtEmp->close();
 
 /**
  * Helper function to calculate attendance, activity, and sales report for a specific period
+ * Optimized with batch queries to eliminate N+1 query loop bottleneck.
  */
 function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $monthLabel) {
-    // 1. Fetch all distributor visits in this range
+    $startDateTime = $startDate . ' 00:00:00';
+    $endDateTime   = $endDate . ' 23:59:59';
+
+    // 1. Fetch all distributor visits in this range (Single query for entire month)
     $dsVisitList = [];
     $dsVisitTimes = [];
 
@@ -182,7 +187,7 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
     }
     $visitStmt->close();
 
-    // 1b. Fetch all administrative visits in this range
+    // 1b. Fetch all administrative visits in this range (Index-friendly timestamp range query)
     $adminVisitList = [];
     $adminVisitTimes = [];
 
@@ -211,11 +216,11 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
         FROM administrative_visit av
         LEFT JOIN new_distributor_search_details sd ON av.id = sd.administrative_visit_id
         WHERE av.user_id = ?
-        AND DATE(av.in_time) BETWEEN ? AND ?
+        AND av.in_time >= ? AND av.in_time <= ?
         ORDER BY av.in_time ASC
     ");
 
-    $adminStmt->bind_param("iss", $employeeId, $startDate, $endDate);
+    $adminStmt->bind_param("iss", $employeeId, $startDateTime, $endDateTime);
     $adminStmt->execute();
     $adminVisitsRes = $adminStmt->get_result();
 
@@ -253,10 +258,190 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
     }
     $adminStmt->close();
 
-    // 2. Iterate dates
+    // 2. Batch fetch daily activity start/end times for entire period in 1 query
+    $dailyActivityTimes = [];
+    $actStmt = $con->prepare("
+        SELECT activitydate, activitytime 
+        FROM outletactivity 
+        WHERE userid = ? AND activitydate BETWEEN ? AND ? 
+        ORDER BY id ASC
+    ");
+    $actStmt->bind_param("iss", $employeeId, $startDate, $endDate);
+    $actStmt->execute();
+    $actRes = $actStmt->get_result();
+    while ($row = $actRes->fetch_assoc()) {
+        $d = $row['activitydate'];
+        if (!isset($dailyActivityTimes[$d])) {
+            $dailyActivityTimes[$d] = [
+                'start' => $row['activitytime'],
+                'end'   => $row['activitytime']
+            ];
+        } else {
+            $dailyActivityTimes[$d]['end'] = $row['activitytime'];
+        }
+    }
+    $actStmt->close();
+
+    // 3. Batch fetch routes/areas visited across entire period in 1 query
+    $areasByDate = [];
+    $allAreaIds = [];
+    $routeStmt = $con->prepare("
+        SELECT DISTINCT
+            a.activitydate,
+            o.areaid,
+            area.area AS areaName
+        FROM outletactivity a
+        JOIN outlets o ON a.outletid = o.id
+        JOIN area ON o.areaid = area.id
+        WHERE a.userid = ?
+            AND a.activitydate BETWEEN ? AND ?
+            AND a.visittype = '0'
+        ORDER BY a.activitydate ASC, areaName ASC
+    ");
+    $routeStmt->bind_param("iss", $employeeId, $startDate, $endDate);
+    $routeStmt->execute();
+    $routeRes = $routeStmt->get_result();
+    while ($row = $routeRes->fetch_assoc()) {
+        $d = $row['activitydate'];
+        $aid = (int)$row['areaid'];
+        $areasByDate[$d][] = [
+            'areaid'   => $aid,
+            'areaName' => $row['areaName']
+        ];
+        $allAreaIds[$aid] = true;
+    }
+    $routeStmt->close();
+
+    // 4. Batch fetch area bookings across entire period in 1 index-friendly query
+    $areaBookings = [];
+    $bStmt = $con->prepare("
+        SELECT 
+            DATE(b.booking_time) AS b_date,
+            o.areaid,
+            COUNT(DISTINCT b.outlet_id) AS productive_outlets, 
+            SUM(b.total_amount) AS total_value_orders 
+        FROM booking b
+        INNER JOIN outlets o ON b.outlet_id = o.id
+        WHERE b.user_id = ? 
+          AND b.booking_time >= ? AND b.booking_time <= ?
+        GROUP BY DATE(b.booking_time), o.areaid
+    ");
+    $bStmt->bind_param("iss", $employeeId, $startDateTime, $endDateTime);
+    $bStmt->execute();
+    $bRes = $bStmt->get_result();
+    while ($row = $bRes->fetch_assoc()) {
+        $areaBookings[$row['b_date']][$row['areaid']] = [
+            'productive_outlets' => (int)($row['productive_outlets'] ?? 0),
+            'total_value_orders' => (float)($row['total_value_orders'] ?? 0)
+        ];
+    }
+    $bStmt->close();
+
+    // 5. Batch fetch global daily bookings across entire period in 1 index-friendly query
+    $globalBookings = [];
+    $gbStmt = $con->prepare("
+        SELECT 
+            DATE(booking_time) AS b_date,
+            COUNT(DISTINCT outlet_id) AS productive_outlets, 
+            SUM(total_amount) AS total_value_orders 
+        FROM booking 
+        WHERE user_id = ? 
+          AND booking_time >= ? AND booking_time <= ?
+        GROUP BY DATE(booking_time)
+    ");
+    $gbStmt->bind_param("iss", $employeeId, $startDateTime, $endDateTime);
+    $gbStmt->execute();
+    $gbRes = $gbStmt->get_result();
+    while ($row = $gbRes->fetch_assoc()) {
+        $globalBookings[$row['b_date']] = [
+            'productive_outlets' => (int)($row['productive_outlets'] ?? 0),
+            'total_value_orders' => (float)($row['total_value_orders'] ?? 0)
+        ];
+    }
+    $gbStmt->close();
+
+    // 6. Batch fetch new outlets created and visited outlets counts by (date, areaid) in 1 query
+    $areaActivityStats = [];
+    $actStatStmt = $con->prepare("
+        SELECT 
+            a.activitydate,
+            o.areaid,
+            COUNT(DISTINCT CASE WHEN a.activitytype = 'New Outlet Create' THEN o.id END) AS new_outlets_count,
+            COUNT(DISTINCT CASE WHEN a.activitytype IN ('Outlet Visit', 'New Outlet Create') THEN o.id END) AS visited_outlets_count
+        FROM outletactivity a 
+        JOIN outlets o ON a.outletid = o.id 
+        WHERE a.userid = ? 
+          AND a.activitydate BETWEEN ? AND ?
+          AND a.activitytype IN ('Outlet Visit', 'New Outlet Create')
+        GROUP BY a.activitydate, o.areaid
+    ");
+    $actStatStmt->bind_param("iss", $employeeId, $startDate, $endDate);
+    $actStatStmt->execute();
+    $actStatRes = $actStatStmt->get_result();
+    while ($row = $actStatRes->fetch_assoc()) {
+        $areaActivityStats[$row['activitydate']][$row['areaid']] = [
+            'new'     => (int)$row['new_outlets_count'],
+            'visited' => (int)$row['visited_outlets_count']
+        ];
+    }
+    $actStatStmt->close();
+
+    // 7. Batch precompute cumulative total outlets on route for all visited areas
+    $outletsPriorCount = [];
+    $outletsDailyCreation = [];
+
+    if (!empty($allAreaIds)) {
+        $areaIdList = implode(',', array_map('intval', array_keys($allAreaIds)));
+
+        // Prior to start date
+        $priorRes = mysqli_query($con, "
+            SELECT areaid, COUNT(id) AS cnt 
+            FROM outlets 
+            WHERE areaid IN ($areaIdList) AND creationdate < '$startDateTime'
+            GROUP BY areaid
+        ");
+        if ($priorRes) {
+            while ($pRow = mysqli_fetch_assoc($priorRes)) {
+                $outletsPriorCount[(int)$pRow['areaid']] = (int)$pRow['cnt'];
+            }
+        }
+
+        // Daily creations during the month
+        $dailyRes = mysqli_query($con, "
+            SELECT areaid, DATE(creationdate) AS c_date, COUNT(id) AS cnt 
+            FROM outlets 
+            WHERE areaid IN ($areaIdList) 
+              AND creationdate >= '$startDateTime' 
+              AND creationdate <= '$endDateTime'
+            GROUP BY areaid, DATE(creationdate)
+        ");
+        if ($dailyRes) {
+            while ($dRow = mysqli_fetch_assoc($dailyRes)) {
+                $outletsDailyCreation[(int)$dRow['areaid']][$dRow['c_date']] = (int)$dRow['cnt'];
+            }
+        }
+    }
+
     $dates = getDatesFromRange($startDate, $endDate);
     $totalDaysCount = count($dates);
 
+    $cumulativeOutletsByArea = [];
+    foreach ($allAreaIds as $aid => $_) {
+        $cumulativeOutletsByArea[$aid] = $outletsPriorCount[$aid] ?? 0;
+    }
+
+    $outletsOnRouteByDateArea = [];
+    foreach ($dates as $dd) {
+        $d = date('Y-m-d', strtotime($dd));
+        foreach ($allAreaIds as $aid => $_) {
+            $outletsOnRouteByDateArea[$d][$aid] = $cumulativeOutletsByArea[$aid];
+            if (isset($outletsDailyCreation[$aid][$d])) {
+                $cumulativeOutletsByArea[$aid] += $outletsDailyCreation[$aid][$d];
+            }
+        }
+    }
+
+    // 8. Iterate dates in PHP memory (ZERO database round-trips inside loop!)
     $starttimearray = [];
     $endtimearray = [];
     $totalMinutes = 0;
@@ -284,19 +469,9 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
         $workingTime = '0 Hrs 0 Mins';
         $workingMinutes = 0;
 
-        // Fetch outlet activities for the day
-        $actRes = mysqli_query($con, "
-            SELECT activitytime 
-            FROM outletactivity 
-            WHERE userid = '$employeeId' AND activitydate = '$selectdate' 
-            ORDER BY id ASC
-        ");
-
-        $count = mysqli_num_rows($actRes);
-        for ($i = 0; $i < $count; $i++) {
-            $row = mysqli_fetch_assoc($actRes);
-            if ($i === 0) $starttime = $row["activitytime"];
-            if ($i === $count - 1) $endtime = $row["activitytime"];
+        if (isset($dailyActivityTimes[$selectdate])) {
+            $starttime = $dailyActivityTimes[$selectdate]['start'];
+            $endtime   = $dailyActivityTimes[$selectdate]['end'];
         }
 
         $starttimeStamp = $starttime ? strtotime($starttime) : 0;
@@ -381,21 +556,7 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
 
         $totalMinutes += $workingMinutes;
 
-        // Fetch area & route details
-        $areaQuery = "
-            SELECT DISTINCT
-                o.areaid,
-                area.area AS areaName
-            FROM outletactivity a
-            JOIN outlets o ON a.outletid = o.id
-            JOIN area ON o.areaid = area.id
-            WHERE a.userid = '$employeeId'
-                AND a.activitydate = '$selectdate'
-                AND a.visittype = '0'
-            ORDER BY areaName ASC
-        ";
-        $areaRes = mysqli_query($con, $areaQuery);
-
+        // Route details & bookings for the day
         $routesVisited = [];
         $dayOutletsOnRoute = 0;
         $dayNewOutlets = 0;
@@ -404,65 +565,18 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
         $dayNotVisitedOutlets = 0;
         $dayOrderValue = 0.0;
 
-        // Fetch Bookings for this employee on this date grouped by area
-        $bookingsByArea = [];
-        $bStmt = mysqli_query($con, "
-            SELECT 
-                o.areaid,
-                COUNT(DISTINCT b.outlet_id) AS productive_outlets, 
-                SUM(b.total_amount) AS total_value_orders 
-            FROM booking b
-            INNER JOIN outlets o ON b.outlet_id = o.id
-            WHERE b.user_id = '$employeeId' AND DATE(b.booking_time) = '$selectdate'
-            GROUP BY o.areaid
-        ");
-        if ($bStmt) {
-            while ($bRow = mysqli_fetch_assoc($bStmt)) {
-                $bookingsByArea[$bRow['areaid']] = [
-                    'productive_outlets' => (int)($bRow['productive_outlets'] ?? 0),
-                    'total_value_orders' => (float)($bRow['total_value_orders'] ?? 0)
-                ];
-            }
-        }
+        $bookingsByArea = $areaBookings[$selectdate] ?? [];
+        $globalDailyBooking = $globalBookings[$selectdate] ?? ['productive_outlets' => 0, 'total_value_orders' => 0];
 
-        // Global daily booking in case area matching differs
-        $globalDailyBooking = mysqli_fetch_assoc(mysqli_query($con, "
-            SELECT COUNT(DISTINCT outlet_id) as productive_outlets, SUM(total_amount) as total_value_orders 
-            FROM booking 
-            WHERE user_id = '$employeeId' AND DATE(booking_time) = '$selectdate'
-        ")) ?: ['productive_outlets' => 0, 'total_value_orders' => 0];
-
-        while ($areaRow = mysqli_fetch_assoc($areaRes)) {
+        $dayRoutes = $areasByDate[$selectdate] ?? [];
+        foreach ($dayRoutes as $areaRow) {
             $areaId = $areaRow["areaid"];
             $areaName = $areaRow["areaName"];
 
-            // 1. Total outlets on route (created before this date)
-            $totOutRes = mysqli_fetch_assoc(mysqli_query($con, "
-                SELECT COUNT(id) as total_outelate 
-                FROM outlets 
-                WHERE areaid = '$areaId' AND DATE(creationdate) < '$selectdate'
-            ")) ?: ['total_outelate' => 0];
-            $totalOutletsOnRoute = (int)$totOutRes['total_outelate'];
+            $totalOutletsOnRoute = $outletsOnRouteByDateArea[$selectdate][$areaId] ?? 0;
+            $newOutletMade = $areaActivityStats[$selectdate][$areaId]['new'] ?? 0;
+            $visitedOutlets = $areaActivityStats[$selectdate][$areaId]['visited'] ?? 0;
 
-            // 2. New outlets made
-            $newOutRes = mysqli_fetch_assoc(mysqli_query($con, "
-                SELECT COUNT(DISTINCT o.id) as new_total_outelate 
-                FROM outletactivity a 
-                JOIN outlets o ON a.outletid = o.id 
-                WHERE a.userid = '$employeeId' AND a.activitydate = '$selectdate' AND a.activitytype = 'New Outlet Create' AND o.areaid = '$areaId'
-            ")) ?: ['new_total_outelate' => 0];
-            $newOutletMade = (int)$newOutRes['new_total_outelate'];
-
-            // 3. Outlets visited
-            $visOutRes = mysqli_fetch_assoc(mysqli_query($con, "
-                SELECT COUNT(DISTINCT o.id) as total_visting_outlate 
-                FROM outletactivity a 
-                JOIN outlets o ON a.outletid = o.id 
-                WHERE a.userid = '$employeeId' AND a.activitydate = '$selectdate' AND a.activitytype IN ('Outlet Visit', 'New Outlet Create') AND o.areaid = '$areaId'
-            ")) ?: ['total_visting_outlate' => 0];
-            $visitedOutlets = (int)$visOutRes['total_visting_outlate'];
-
-            // 4. Bookings for this area
             $areaBooking = $bookingsByArea[$areaId] ?? [
                 'productive_outlets' => 0,
                 'total_value_orders' => 0.0
@@ -617,7 +731,7 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
         ];
     }
 
-    // 3. Compute Averages & Summary
+    // 9. Compute Averages & Summary
     $totalStime = array_sum($starttimearray);
     $totalEtime = array_sum($endtimearray);
 
@@ -668,20 +782,33 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
 // Calculate Date Ranges for Last Month and Current Month
 // -------------------------------------------------------------
 
+// Optional 'month' or 'type' parameter: 'current', 'last', 'both' (default: 'both')
+$monthParam = strtolower(trim($_POST['month'] ?? $_GET['month'] ?? $_POST['type'] ?? $_GET['type'] ?? 'both'));
+if (empty($monthParam)) {
+    $monthParam = 'both';
+}
 
-// Last Month Range: 1st of last month to Last day of last month
-$lastMonthStart = date('Y-m-01', strtotime('first day of last month'));
-$lastMonthEnd   = date('Y-m-t', strtotime('last day of last month'));
-$lastMonthLabel = date('F Y', strtotime('first day of last month'));
+$includeLastMonth    = ($monthParam === 'both' || $monthParam === 'all' || $monthParam === 'last');
+$includeCurrentMonth = ($monthParam === 'both' || $monthParam === 'all' || $monthParam === 'current');
 
-// Current Month Range: 1st of current month to Today (or full month)
-$currentMonthStart = date('Y-m-01');
-$currentMonthEnd   = date('Y-m-d'); // up to today
-$currentMonthLabel = date('F Y');
+$lastMonthData = null;
+$currentMonthData = null;
 
-// Generate Data
-$lastMonthData    = calculateMonthAttendance($con, $userId, $lastMonthStart, $lastMonthEnd, $lastMonthLabel);
-$currentMonthData = calculateMonthAttendance($con, $userId, $currentMonthStart, $currentMonthEnd, $currentMonthLabel);
+if ($includeLastMonth) {
+    // Last Month Range: 1st of last month to Last day of last month
+    $lastMonthStart = date('Y-m-01', strtotime('first day of last month'));
+    $lastMonthEnd   = date('Y-m-t', strtotime('last day of last month'));
+    $lastMonthLabel = date('F Y', strtotime('first day of last month'));
+    $lastMonthData  = calculateMonthAttendance($con, $userId, $lastMonthStart, $lastMonthEnd, $lastMonthLabel);
+}
+
+if ($includeCurrentMonth) {
+    // Current Month Range: 1st of current month to Today (or full month)
+    $currentMonthStart = date('Y-m-01');
+    $currentMonthEnd   = date('Y-m-d'); // up to today
+    $currentMonthLabel = date('F Y');
+    $currentMonthData  = calculateMonthAttendance($con, $userId, $currentMonthStart, $currentMonthEnd, $currentMonthLabel);
+}
 
 // Format Final API Response
 $response = [
