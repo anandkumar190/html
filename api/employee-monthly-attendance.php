@@ -680,7 +680,7 @@ $currentMonthEnd   = date('Y-m-d'); // up to today
 $currentMonthLabel = date('F Y');
 
 // Generate Data
-$lastMonthData    = calculateMonthAttendance($con, $userId, $lastMonthStart, $lastMonthEnd, $lastMonthLabel);
+$lastMonthData    = []; //calculateMonthAttendance($con, $userId, $lastMonthStart, $lastMonthEnd, $lastMonthLabel);
 $currentMonthData = calculateMonthAttendance($con, $userId, $currentMonthStart, $currentMonthEnd, $currentMonthLabel);
 
 // Format Final API Response
