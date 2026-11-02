@@ -277,48 +277,49 @@ $dsVisitTimes=[];
 				if ($i == $count - 1) $endtime = $row["activitytime"];
 			}
 
-			// Convert to timestamps
-			$starttimeStamp = $starttime ? strtotime($starttime) : 0;
-			$endtimeStamp = $endtime ? strtotime($endtime) : 0;
+			// Convert to timestamps anchored to $selectdate
+			$starttimeStamp = !empty($starttime) ? strtotime("$selectdate $starttime") : 0;
+			$endtimeStamp = !empty($endtime) ? strtotime("$selectdate $endtime") : 0;
 
 			// Check for distributor visit times on this date
 			if (isset($dsVisitTimes[$employee][$selectdate])) {
 				$dsMin = $dsVisitTimes[$employee][$selectdate]['min'];
 				$dsMax = $dsVisitTimes[$employee][$selectdate]['max'];
 
-
 				if (!empty($dsMin)) {
-						$dsStart = strtotime($dsMin);
-
-						if ($dsStart !== false && ($starttimeStamp == 0 || $dsStart < $starttimeStamp)) {
-							$starttimeStamp = $dsStart;
-						}
+					$dsStart = strtotime("$selectdate $dsMin");
+					if ($dsStart !== false && ($starttimeStamp == 0 || $dsStart < $starttimeStamp)) {
+						$starttimeStamp = $dsStart;
 					}
+				}
 
-					if (!empty($dsMax)) {
-						$dsEnd = strtotime($dsMax);
-
-						if ($dsEnd !== false && ($endtimeStamp == 0 || $dsEnd > $endtimeStamp)) {
-							$endtimeStamp = $dsEnd;
-						}
+				if (!empty($dsMax)) {
+					$dsEnd = strtotime("$selectdate $dsMax");
+					if ($dsEnd !== false && ($endtimeStamp == 0 || $dsEnd > $endtimeStamp)) {
+						$endtimeStamp = $dsEnd;
 					}
+				}
 			}
 
 			// Check for admin visit times on this date
 			if (isset($adminVisitTimes[$employee][$selectdate])) {
-				$admMin = $adminVisitTimes[$employee][$selectdate]['min'];
-				$admMax = $adminVisitTimes[$employee][$selectdate]['max'];
+				$admMinTs = $adminVisitTimes[$employee][$selectdate]['min'];
+				$admMaxTs = $adminVisitTimes[$employee][$selectdate]['max'];
 
-				if ($admMin > 0 && ($starttimeStamp == 0 || $admMin < $starttimeStamp)) {
-					$starttimeStamp = $admMin;
+				// Extract time-of-day and anchor to $selectdate
+				$admStart = ($admMinTs > 0) ? strtotime("$selectdate " . date('H:i:s', $admMinTs)) : 0;
+				$admEnd   = ($admMaxTs > 0) ? strtotime("$selectdate " . date('H:i:s', $admMaxTs)) : 0;
+
+				if ($admStart > 0 && ($starttimeStamp == 0 || $admStart < $starttimeStamp)) {
+					$starttimeStamp = $admStart;
 				}
-				if ($admMax > 0 && ($endtimeStamp == 0 || $admMax > $endtimeStamp)) {
-					$endtimeStamp = $admMax;
+				if ($admEnd > 0 && ($endtimeStamp == 0 || $admEnd > $endtimeStamp)) {
+					$endtimeStamp = $admEnd;
 				}
 			}
 
-			if ($starttimeStamp > 0 && $endtimeStamp > 0) {
-				$diffSeconds = abs($endtimeStamp - $starttimeStamp);
+			if ($starttimeStamp > 0 && $endtimeStamp > 0 && $endtimeStamp >= $starttimeStamp) {
+				$diffSeconds = $endtimeStamp - $starttimeStamp;
 				$hours       = floor($diffSeconds / 3600);
 				$minutes     = floor(($diffSeconds % 3600) / 60);
 
@@ -326,7 +327,7 @@ $dsVisitTimes=[];
 				$workingTime = sprintf('%dh %dm', $hours, $minutes);
 
 				// Decimal for summing
-				$workingMinuts = ($hours*60) + $minutes ;
+				$workingMinuts = ($hours * 60) + $minutes;
 			}
 
 			// Fetch area details
@@ -446,7 +447,7 @@ $dsVisitTimes=[];
 				// Start time
 				$rowData .= "<td class='col-nowrap'>";
 				if ($starttimeStamp > 0) {
-					$starttimearray[] = $starttimeStamp;
+					$starttimearray[] = strtotime("1970-01-01 " . date('H:i:s', $starttimeStamp));
 					$workingday++;
 					$rowData .= date('h:i A', $starttimeStamp);
 				} elseif (isset($dsVisitList[$employee][$selectdate])) {
@@ -464,7 +465,7 @@ $dsVisitTimes=[];
 				// End time
 				$rowData .= "<td class='col-nowrap'>";
 				if ($endtimeStamp > 0) {
-					$endtimearray[] = $endtimeStamp;
+					$endtimearray[] = strtotime("1970-01-01 " . date('H:i:s', $endtimeStamp));
 					$rowData .= date('h:i A', $endtimeStamp);
 				} elseif (isset($dsVisitList[$employee][$selectdate])) {
 					$rowData .= "<span class='label label-info' style='font-size:9.5px; padding:1px 3px;'>Dist Visit</span>";

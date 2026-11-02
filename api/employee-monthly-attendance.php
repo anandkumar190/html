@@ -474,8 +474,8 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
             $endtime   = $dailyActivityTimes[$selectdate]['end'];
         }
 
-        $starttimeStamp = $starttime ? strtotime($starttime) : 0;
-        $endtimeStamp = $endtime ? strtotime($endtime) : 0;
+        $starttimeStamp = !empty($starttime) ? strtotime("$selectdate $starttime") : 0;
+        $endtimeStamp = !empty($endtime) ? strtotime("$selectdate $endtime") : 0;
 
         // Check for distributor visit timings on this date
         if (isset($dsVisitTimes[$selectdate])) {
@@ -483,14 +483,14 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
             $dsMax = $dsVisitTimes[$selectdate]['max'];
 
             if (!empty($dsMin)) {
-                $dsStart = strtotime($dsMin);
+                $dsStart = strtotime("$selectdate $dsMin");
                 if ($dsStart !== false && ($starttimeStamp === 0 || $dsStart < $starttimeStamp)) {
                     $starttimeStamp = $dsStart;
                 }
             }
 
             if (!empty($dsMax)) {
-                $dsEnd = strtotime($dsMax);
+                $dsEnd = strtotime("$selectdate $dsMax");
                 if ($dsEnd !== false && ($endtimeStamp === 0 || $dsEnd > $endtimeStamp)) {
                     $endtimeStamp = $dsEnd;
                 }
@@ -499,20 +499,23 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
 
         // Check for administrative visit timings on this date
         if (isset($adminVisitTimes[$selectdate])) {
-            $admMin = $adminVisitTimes[$selectdate]['min'];
-            $admMax = $adminVisitTimes[$selectdate]['max'];
+            $admMinTs = $adminVisitTimes[$selectdate]['min'];
+            $admMaxTs = $adminVisitTimes[$selectdate]['max'];
 
-            if ($admMin > 0 && ($starttimeStamp === 0 || $admMin < $starttimeStamp)) {
-                $starttimeStamp = $admMin;
+            $admStart = ($admMinTs > 0) ? strtotime("$selectdate " . date('H:i:s', $admMinTs)) : 0;
+            $admEnd   = ($admMaxTs > 0) ? strtotime("$selectdate " . date('H:i:s', $admMaxTs)) : 0;
+
+            if ($admStart > 0 && ($starttimeStamp === 0 || $admStart < $starttimeStamp)) {
+                $starttimeStamp = $admStart;
             }
-            if ($admMax > 0 && ($endtimeStamp === 0 || $admMax > $endtimeStamp)) {
-                $endtimeStamp = $admMax;
+            if ($admEnd > 0 && ($endtimeStamp === 0 || $admEnd > $endtimeStamp)) {
+                $endtimeStamp = $admEnd;
             }
         }
 
         // Calculate working hours
-        if ($starttimeStamp > 0 && $endtimeStamp > 0) {
-            $diffSeconds = abs($endtimeStamp - $starttimeStamp);
+        if ($starttimeStamp > 0 && $endtimeStamp > 0 && $endtimeStamp >= $starttimeStamp) {
+            $diffSeconds = $endtimeStamp - $starttimeStamp;
             $hours = floor($diffSeconds / 3600);
             $minutes = floor(($diffSeconds % 3600) / 60);
             $workingTime = sprintf('%d Hrs %d Mins', $hours, $minutes);
@@ -525,12 +528,12 @@ function calculateMonthAttendance($con, $employeeId, $startDate, $endDate, $mont
         $dayStatus = 'Leave';
 
         if ($starttimeStamp > 0) {
-            $starttimearray[] = $starttimeStamp;
+            $starttimearray[] = strtotime("1970-01-01 " . date('H:i:s', $starttimeStamp));
             $workingDaysCount++;
             $firstCallFormatted = date('h:i:s A', $starttimeStamp);
 
             if ($endtimeStamp > 0) {
-                $endtimearray[] = $endtimeStamp;
+                $endtimearray[] = strtotime("1970-01-01 " . date('H:i:s', $endtimeStamp));
                 $lastCallFormatted = date('h:i:s A', $endtimeStamp);
             }
             $dayStatus = 'Present';
