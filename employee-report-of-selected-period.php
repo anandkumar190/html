@@ -165,6 +165,8 @@ $dsVisitTimes=[];
 				FROM administrative_visit av
 				LEFT JOIN new_distributor_search_details sd ON av.id = sd.administrative_visit_id
 				WHERE av.user_id = ?
+				AND av.company_name IS NOT NULL
+				AND av.out_time IS NOT NULL
 				AND DATE(av.in_time) BETWEEN ? AND ?
 				ORDER BY av.in_time ASC
 			");
