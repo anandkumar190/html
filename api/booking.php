@@ -1,5 +1,5 @@
 <?php 
-include("../connect.php");
+require_once(__DIR__ . "/../connect.php");
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -184,7 +184,22 @@ if(isset($_GET['subcategorybyid'])){
 if(isset($_GET['orderproduct'])){
     $response = array();
     try {
-        // 1. Safely retrieve and sanitize inputs instead of extract()
+        // Fallback for raw JSON body if $_POST is empty
+        if (empty($_POST)) {
+            $rawInput = file_get_contents('php://input');
+            if (!empty($rawInput)) {
+                $jsonData = json_decode($rawInput, true);
+                if (is_array($jsonData)) {
+                    $_POST = $jsonData;
+                }
+            }
+        }
+
+        // 1. Safely retrieve and sanitize inputs
+        $order_id = isset($_POST['order_id']) ? trim($_POST['order_id']) : (isset($_POST['orderid']) ? trim($_POST['orderid']) : (isset($_POST['booking_id']) ? trim($_POST['booking_id']) : (isset($_GET['order_id']) ? trim($_GET['order_id']) : (isset($_GET['orderid']) ? trim($_GET['orderid']) : ''))));
+        $raw_is_edit_order = isset($_POST['is_edit_order']) ? $_POST['is_edit_order'] : (isset($_GET['is_edit_order']) ? $_GET['is_edit_order'] : null);
+        $is_edit_flag = ($raw_is_edit_order === true || $raw_is_edit_order === 1 || $raw_is_edit_order === '1' || strtolower((string)$raw_is_edit_order) === 'true');
+
         $outlet_id = isset($_POST['outlet_id']) ? trim($_POST['outlet_id']) : '';
         $user_id = isset($_POST['user_id']) ? trim($_POST['user_id']) : (isset($_POST['userid']) ? trim($_POST['userid']) : '');
         $total_amount = isset($_POST['total_amount']) ? trim($_POST['total_amount']) : '';
@@ -221,12 +236,37 @@ if(isset($_GET['orderproduct'])){
         $product_ids = explode(",", $raw_product_id);
         $product_names = explode(",", $raw_product_name);
         $qty_nos = explode(",", $raw_qty_no);
-        $new_prices = explode(",", $raw_new_price);
         $product_wise_total_prices = explode(",", $raw_product_wise_total_price);
 
         $product_count = count($product_ids);
         if ($product_count === 0 || empty($product_ids[0])) {
             throw new Exception("No products specified in the order.");
+        }
+
+        // Handle flexible category/subcategory mapping (e.g. if single category or de-duplicated list was passed)
+        if (count($category_ids) < $product_count) {
+            $last_cat = !empty($category_ids) ? end($category_ids) : '0';
+            $category_ids = array_pad($category_ids, $product_count, $last_cat);
+        }
+        if (count($subcategory_ids) < $product_count) {
+            $last_subcat = !empty($subcategory_ids) ? end($subcategory_ids) : '0';
+            $subcategory_ids = array_pad($subcategory_ids, $product_count, $last_subcat);
+        }
+
+        // Handle new_price fallback if client didn't supply it
+        if (empty($raw_new_price)) {
+            $new_prices = array();
+            for ($i = 0; $i < $product_count; $i++) {
+                $q = isset($qty_nos[$i]) && is_numeric($qty_nos[$i]) && (float)$qty_nos[$i] > 0 ? (float)$qty_nos[$i] : 1;
+                $tot = isset($product_wise_total_prices[$i]) && is_numeric($product_wise_total_prices[$i]) ? (float)$product_wise_total_prices[$i] : 0;
+                $new_prices[$i] = number_format($tot / $q, 2, '.', '');
+            }
+        } else {
+            $new_prices = explode(",", $raw_new_price);
+            if (count($new_prices) < $product_count) {
+                $last_price = !empty($new_prices) ? end($new_prices) : '0.00';
+                $new_prices = array_pad($new_prices, $product_count, $last_price);
+            }
         }
 
         // Verify list lengths match
@@ -239,48 +279,97 @@ if(isset($_GET['orderproduct'])){
             throw new Exception("Order item parameters mismatch. Please verify that all item lists have the same number of elements.");
         }
 
-        // 3. Prevent Duplicate Booking (within last 2 minutes for same outlet, user, amount, and qty)
-        $stmt_check = $con->prepare("
-            SELECT id FROM booking 
-            WHERE outlet_id = ? 
-              AND user_id = ? 
-              AND total_amount = ? 
-              AND total_qty = ? 
-              AND booking_time >= NOW() - INTERVAL 5 MINUTE 
-            LIMIT 1
-        ");
-        if (!$stmt_check) {
-            throw new Exception("Prepare statement failed for duplicate check: " . $con->error);
-        }
-        $stmt_check->bind_param("ssdd", $outlet_id, $user_id, $total_amount, $total_qty);
-        if (!$stmt_check->execute()) {
-            throw new Exception("Execute failed for duplicate check: " . $stmt_check->error);
-        }
-        $res_check = $stmt_check->get_result();
-        if ($res_check->fetch_assoc()) {
-            $stmt_check->close();
-            throw new Exception("Duplicate booking detected. An identical booking was already submitted for this outlet in the last 2 minutes.");
-        }
-        $stmt_check->close();
+        // 3. Determine if this is an EDIT (edit existing order) or CREATE (new order)
+        // order_id only comes when edit order
+        $is_edit_order = false;
+        $booking_id = null;
 
-        // 4. Begin Transaction
+        if (($is_edit_flag || !empty($order_id)) && !empty($order_id) && is_numeric($order_id) && (int)$order_id > 0) {
+            $check_id = (int)$order_id;
+            $stmt_check_order = $con->prepare("SELECT id FROM booking WHERE id = ? LIMIT 1");
+            if (!$stmt_check_order) {
+                throw new Exception("Prepare statement failed for order lookup: " . $con->error);
+            }
+            $stmt_check_order->bind_param("i", $check_id);
+            $stmt_check_order->execute();
+            $res_order = $stmt_check_order->get_result();
+            if ($res_order && $res_order->num_rows > 0) {
+                $is_edit_order = true;
+                $booking_id = $check_id;
+            } else {
+                throw new Exception("Order not found with order_id: " . $check_id);
+            }
+            $stmt_check_order->close();
+        }
+
+        // 4. If creating a NEW order, prevent duplicate submission within last 5 minutes
+        if (!$is_edit_order) {
+            $stmt_check = $con->prepare("
+                SELECT id FROM booking 
+                WHERE outlet_id = ? 
+                  AND user_id = ? 
+                  AND total_amount = ? 
+                  AND total_qty = ? 
+                  AND booking_time >= NOW() - INTERVAL 5 MINUTE 
+                LIMIT 1
+            ");
+            if (!$stmt_check) {
+                throw new Exception("Prepare statement failed for duplicate check: " . $con->error);
+            }
+            $stmt_check->bind_param("ssdd", $outlet_id, $user_id, $total_amount, $total_qty);
+            if (!$stmt_check->execute()) {
+                throw new Exception("Execute failed for duplicate check: " . $stmt_check->error);
+            }
+            $res_check = $stmt_check->get_result();
+            if ($res_check && $res_check->fetch_assoc()) {
+                $stmt_check->close();
+                throw new Exception("Duplicate booking detected. An identical booking was already submitted for this outlet in the last 2 minutes.");
+            }
+            $stmt_check->close();
+        }
+
+        // 5. Begin Transaction
         $con->begin_transaction();
 
-        // 5. Insert into booking using Prepared Statement
-        $offer_qty = 0;
-        $stmt_booking = $con->prepare("INSERT INTO booking(outlet_id, user_id, offer_qty, total_amount, total_qty) VALUES (?, ?, ?, ?, ?)");
-        if (!$stmt_booking) {
-            throw new Exception("Prepare statement failed for booking insertion: " . $con->error);
-        }
-        $stmt_booking->bind_param("ssidd", $outlet_id, $user_id, $offer_qty, $total_amount, $total_qty);
-        if (!$stmt_booking->execute()) {
-            throw new Exception("Execute failed for booking insertion: " . $stmt_booking->error);
-        }
-        $booking_id = $stmt_booking->insert_id;
-        $stmt_booking->close();
+        if ($is_edit_order) {
+            // Update existing booking master record
+            $stmt_booking = $con->prepare("UPDATE booking SET outlet_id = ?, user_id = ?, total_amount = ?, total_qty = ? WHERE id = ?");
+            if (!$stmt_booking) {
+                throw new Exception("Prepare statement failed for booking update: " . $con->error);
+            }
+            $stmt_booking->bind_param("ssddi", $outlet_id, $user_id, $total_amount, $total_qty, $booking_id);
+            if (!$stmt_booking->execute()) {
+                throw new Exception("Execute failed for booking update: " . $stmt_booking->error);
+            }
+            $stmt_booking->close();
 
-        if ($booking_id <= 0) {
-            throw new Exception("Failed to generate a valid booking ID");
+            // Delete old items for this booking
+            $stmt_del = $con->prepare("DELETE FROM booking_item WHERE booking_id_fk = ?");
+            if (!$stmt_del) {
+                throw new Exception("Prepare statement failed for deleting old booking items: " . $con->error);
+            }
+            $stmt_del->bind_param("i", $booking_id);
+            if (!$stmt_del->execute()) {
+                throw new Exception("Execute failed for deleting old booking items: " . $stmt_del->error);
+            }
+            $stmt_del->close();
+        } else {
+            // Insert new booking master record
+            $offer_qty = 0;
+            $stmt_booking = $con->prepare("INSERT INTO booking(outlet_id, user_id, offer_qty, total_amount, total_qty) VALUES (?, ?, ?, ?, ?)");
+            if (!$stmt_booking) {
+                throw new Exception("Prepare statement failed for booking insertion: " . $con->error);
+            }
+            $stmt_booking->bind_param("ssidd", $outlet_id, $user_id, $offer_qty, $total_amount, $total_qty);
+            if (!$stmt_booking->execute()) {
+                throw new Exception("Execute failed for booking insertion: " . $stmt_booking->error);
+            }
+            $booking_id = $stmt_booking->insert_id;
+            $stmt_booking->close();
+
+            if ($booking_id <= 0) {
+                throw new Exception("Failed to generate a valid booking ID");
+            }
         }
 
         // 6. Insert booking items using Prepared Statement
@@ -312,7 +401,12 @@ if(isset($_GET['orderproduct'])){
         // 7. Commit Transaction
         $con->commit();
 
-        echo json_encode(['msg' => 'Success']);
+        echo json_encode([
+            'msg' => 'Success',
+            'order_id' => (string)$booking_id,
+            'is_edit_order' => $is_edit_order,
+            'action' => $is_edit_order ? 'updated' : 'created'
+        ]);
 
     } catch (Throwable $e) {
         // Rollback transaction on failure
@@ -322,7 +416,6 @@ if(isset($_GET['orderproduct'])){
         echo json_encode(['msg' => $e->getMessage()]);
     }
 }
-
 
 if(isset($_GET['search'])){
     
@@ -1125,13 +1218,22 @@ if (isset($_GET['notvist'])) {
 if (isset($_GET['checktodayorder'])) {
     header('Content-Type: application/json');
     $response = array();
-   extract($_POST);
     try {
-        // Read form data directly from $_POST (with $_REQUEST fallback)
-        $outlet_id = isset($outlet_id) ? trim($outlet_id) : null;
-        $userid = isset($userid) ? trim($userid) : null;
-        $order_date = isset($visit_date) ? trim($visit_date):null;
- 		
+        // Fallback for raw JSON body if $_POST is empty
+        if (empty($_POST)) {
+            $rawInput = file_get_contents('php://input');
+            if (!empty($rawInput)) {
+                $jsonData = json_decode($rawInput, true);
+                if (is_array($jsonData)) {
+                    $_POST = $jsonData;
+                }
+            }
+        }
+
+        // Support parameters from POST, GET, or JSON
+        $outlet_id = isset($_POST['outlet_id']) ? trim($_POST['outlet_id']) : (isset($_GET['outlet_id']) ? trim($_GET['outlet_id']) : null);
+        $userid = isset($_POST['userid']) ? trim($_POST['userid']) : (isset($_POST['user_id']) ? trim($_POST['user_id']) : (isset($_GET['userid']) ? trim($_GET['userid']) : (isset($_GET['user_id']) ? trim($_GET['user_id']) : null)));
+        $order_date = isset($_POST['visit_date']) ? trim($_POST['visit_date']) : (isset($_GET['visit_date']) ? trim($_GET['visit_date']) : null);
 
         if (empty($order_date)) {
             $order_date = date("Y-m-d");
@@ -1147,11 +1249,17 @@ if (isset($_GET['checktodayorder'])) {
         $end_time = $order_date . " 23:59:59";
 
         if (!empty($userid)) {
-            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND user_id = ? AND booking_time >= ? AND booking_time < ? ORDER BY id DESC LIMIT 1");
+            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND user_id = ? AND booking_time >= ? AND booking_time <= ? ORDER BY id DESC LIMIT 1");
             if (!$stmt) {
                 throw new Exception("Prepare statement failed: " . $con->error);
             }
-          $temp1stmt = $stmt->bind_param("iiss", $outlet_id, $userid, $start_time, $end_time);
+            $stmt->bind_param("iiss", $outlet_id, $userid, $start_time, $end_time);
+        } else {
+            $stmt = $con->prepare("SELECT id, total_amount FROM booking WHERE outlet_id = ? AND booking_time >= ? AND booking_time <= ? ORDER BY id DESC LIMIT 1");
+            if (!$stmt) {
+                throw new Exception("Prepare statement failed: " . $con->error);
+            }
+            $stmt->bind_param("iss", $outlet_id, $start_time, $end_time);
         }
 
         if (!$stmt->execute()) {
@@ -1160,12 +1268,11 @@ if (isset($_GET['checktodayorder'])) {
 
         $res = $stmt->get_result();
 
-     
         if ($row = $res->fetch_assoc()) {
             $order_id = (string)$row['id'];
             $total_amount = $row['total_amount'];
 
-            $stmt_items = $con->prepare("SELECT category_id, subcategory_id, product_id, product_name, qty_no, total_price FROM booking_item WHERE booking_id_fk = ? ORDER BY id ASC");
+            $stmt_items = $con->prepare("SELECT category_id, subcategory_id, product_id, product_name, qty_no, total_price, new_price FROM booking_item WHERE booking_id_fk = ? ORDER BY id ASC");
             if (!$stmt_items) {
                 throw new Exception("Prepare statement for items failed: " . $con->error);
             }
@@ -1177,6 +1284,7 @@ if (isset($_GET['checktodayorder'])) {
             $category_ids = array();
             $subcategory_ids = array();
             $qty_nos = array();
+            $new_prices = array();
             $product_wise_total_prices = array();
             $sum_total = 0.00;
 
@@ -1187,6 +1295,8 @@ if (isset($_GET['checktodayorder'])) {
                 $subcategory_ids[] = $item['subcategory_id'];
                 $qty_nos[] = $item['qty_no'];
                 $item_price = (float)$item['total_price'];
+                $unit_price = isset($item['new_price']) ? (float)$item['new_price'] : ($item['qty_no'] > 0 ? $item_price / (float)$item['qty_no'] : 0);
+                $new_prices[] = number_format($unit_price, 2, '.', '');
                 $product_wise_total_prices[] = number_format($item_price, 2, '.', '');
                 $sum_total += $item_price;
             }
@@ -1199,6 +1309,7 @@ if (isset($_GET['checktodayorder'])) {
             $category_id_str = implode(", ", array_values(array_unique($category_ids)));
             $subcategory_id_str = implode(", ", $subcategory_ids);
             $qty_no_str = implode(", ", $qty_nos);
+            $new_price_str = implode(", ", $new_prices);
             $product_wise_total_price_str = implode(", ", $product_wise_total_prices);
             $total_price_before_discount_str = number_format($final_total, 2, '.', '');
 
@@ -1214,6 +1325,7 @@ if (isset($_GET['checktodayorder'])) {
                             "category_id" => $category_id_str,
                             "subcategory_id" => $subcategory_id_str,
                             "qty_no" => $qty_no_str,
+                            "new_price" => $new_price_str,
                             "product_wise_total_price" => $product_wise_total_price_str,
                             "total_price_before_discount" => $total_price_before_discount_str
                         )

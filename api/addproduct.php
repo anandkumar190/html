@@ -1,5 +1,5 @@
 <?php
-  require('../connect.php');
+  require_once(__DIR__ . '/../connect.php');
   $time=date("H:i:s"); 
   $datetime = date("Y-m-d H:i:s");
   $date=date("Y-m-d");
@@ -21,7 +21,9 @@
 	$tmpname=$_FILES['pimage']['tmp_name'];
 	$filesize=$_FILES['pimage']['size'];
 	$filetype=$_FILES['pimage']['type'];
-	if($filetype!="image/jpg" && $filetype!="image/png" && $filetype!="image/jpeg")
+	$fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+	if($filetype!="image/jpg" && $filetype!="image/png" && $filetype!="image/jpeg" && !in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp']))
 	{
 	  echo"Please Upload Images(PNG,JPG & JPEG) Files Only...";
 	  return;
@@ -32,9 +34,9 @@
 	  return;
 	}
 	
-	
-	$filename = preg_replace("/[^a-zA-Z0-9_-]/", "", $pname.$pshort) . ".jpg"; // Clean file name
-	$destination = "../imgproduct/" . $filename;
+	$cleanBaseName = preg_replace("/[^a-zA-Z0-9_-]/", "", $pname.$pshort);
+	$filename = $cleanBaseName . "_" . time() . "." . ($fileExt === 'jpeg' ? 'jpg' : $fileExt);
+	$destination = __DIR__ . "/../imgproduct/" . $filename;
 	
 	$prodective_cell = isset($prodective_cell) ? $prodective_cell : 0;
 	
@@ -52,8 +54,6 @@
 
   else if(isset($_GET['show']))
   {
-   //  $res=mysqli_query($con,"SELECT skus.id,skus.productname,skus.productid,sku_unit.name AS unit ,skus.rate,skus.brandname,parduct_sub_cat.cmrp As mrp,product_cat.name AS catname,parduct_sub_cat.name AS sub_catname,skus.image,skus.prodective_cell FROM skus LEFT JOIN product_cat on product_cat.id=skus.catid LEFT JOIN parduct_sub_cat on parduct_sub_cat.id= skus.scatid  LEFT JOIN sku_unit on sku_unit.id=parduct_sub_cat.cunit ORDER BY skus.prodective_cell ASC");
-
 	 $res = mysqli_query($con, "
 SELECT 
     skus.id, 
@@ -112,81 +112,74 @@ ORDER BY  cat_order ,sub_cat_order ,skus.prodective_cell ASC
 	  extract($_POST);
 	  
 	  $query = "select productid from skus where productid = '$pshort' && id='$pid'";
-	  //echo($pshort);
 	  $res=mysqli_query($con,$query);
 	  if( mysqli_num_rows($res)<=0 ){
 			$query = "select productid from skus where productid = '$pshort'";
-	     //echo($pshort);
 	     $res=mysqli_query($con,$query);
 	     if( mysqli_num_rows($res)> 0 ){
 	 		echo "get_value";
 			return;
 	    }
-	}
+	  }
 	  
+	  $prodective_cell = isset($prodective_cell) ? $prodective_cell : 0;
 	  
-	  if(isset($_FILES['pimage']['name']) && $_FILES['pimage']['name']!="" && !isset($_POST['pimage']) )
+	  if(isset($_FILES['pimage']) && !empty($_FILES['pimage']['name']) && $_FILES['pimage']['error'] === UPLOAD_ERR_OK)
 	  {
-		  
-	     $filename=$_FILES['pimage']['name'];
-	     $tmpname=$_FILES['pimage']['tmp_name'];
-	     $filesize=$_FILES['pimage']['size'];
-	     $filetype=$_FILES['pimage']['type'];
-	     if($filetype!="image/jpg" && $filetype!="image/png" &&   $filetype!="image/jpeg")
+	     $origName = $_FILES['pimage']['name'];
+	     $tmpname  = $_FILES['pimage']['tmp_name'];
+	     $filesize = $_FILES['pimage']['size'];
+	     $fileExt  = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+
+	     $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+	     if(!in_array($fileExt, $allowedExts))
 	     {
-	       echo"Please Upload Images(PNG,JPG & JPEG) Files Only...";
+	       echo "Please Upload Images(PNG, JPG, JPEG & WEBP) Files Only...";
  	       return;
       	 }
-	     if($filesize>800000)
+	     if($filesize > 800000)
 	     {
-	       echo"Image can't be Greater than 800KB .";
+	       echo "Image can't be Greater than 800KB.";
 	       return;
-	      }
-		  
+	     }
 
-		  $filename = preg_replace("/[^a-zA-Z0-9_-]/", "", $pname.$pshort) . ".jpg"; // Clean file name
-		  $destination = "../imgproduct/" . $filename;
-	  
-		  // Update query
-		  $prodective_cell = isset($prodective_cell) ? $prodective_cell : 0;
-		  $query = "UPDATE skus SET productname=?, productid=?, catid=?, scatid=?, image=?, prodective_cell=? WHERE id=?";
-		  $stmt = mysqli_prepare($con, $query);
-		  mysqli_stmt_bind_param($stmt, "ssissii", $pname, $pshort, $catid, $scatid, $filename, $prodective_cell, $pid);
-		  mysqli_stmt_execute($stmt);
-	  
-		  if (mysqli_stmt_affected_rows($stmt) > 0 || !file_exists($destination)) {
-			  if (move_uploaded_file($tmpname, $destination)) {
-				  echo "success";
-			  } else {
-				  echo "Image upload error";
+		  // Generate clean unique filename with extension and timestamp to bust browser cache
+		  $cleanBaseName = preg_replace("/[^a-zA-Z0-9_-]/", "", $pname . $pshort);
+		  $filename = $cleanBaseName . "_" . time() . "." . ($fileExt === 'jpeg' ? 'jpg' : $fileExt);
+		  $destination = __DIR__ . "/../imgproduct/" . $filename;
+
+		  // Move uploaded file first
+		  if (move_uploaded_file($tmpname, $destination)) {
+			  // Fetch old image to delete old file from disk
+			  $oldImgRes = mysqli_query($con, "SELECT image FROM skus WHERE id='$pid'");
+			  if($oldRow = mysqli_fetch_assoc($oldImgRes)) {
+				  $oldFile = __DIR__ . "/../imgproduct/" . $oldRow['image'];
+				  if(!empty($oldRow['image']) && file_exists($oldFile) && $oldFile != $destination) {
+					  @unlink($oldFile);
+				  }
 			  }
+
+			  // Update database with new image filename
+			  $query = "UPDATE skus SET productname=?, productid=?, catid=?, scatid=?, image=?, prodective_cell=? WHERE id=?";
+			  $stmt = mysqli_prepare($con, $query);
+			  mysqli_stmt_bind_param($stmt, "ssissii", $pname, $pshort, $catid, $scatid, $filename, $prodective_cell, $pid);
+			  mysqli_stmt_execute($stmt);
+			  mysqli_stmt_close($stmt);
+
+			  echo "success";
 		  } else {
-			  echo "No changes made to the database.";
+			  echo "Image upload error";
 		  }
-
-
-
-
-
-
-
 	   }
 	   else
 	   {
-		   
-	      //$filename=$pname.$pshort.".jpg";
-		  $prodective_cell = isset($prodective_cell) ? $prodective_cell : 0;
-	      mysqli_query($con,"update skus set productname='$pname',productid='$pshort',catid='$catid',scatid='$scatid',prodective_cell='$prodective_cell' where id='$pid'") or die(mysqli_error($con));
-	      if(mysqli_affected_rows($con)>0)
-       	  {
-	          echo"success";  
-	      }
-		  else
-		  {
-			  echo"No changes affected...";
-		  }
+	      $stmt = mysqli_prepare($con, "UPDATE skus SET productname=?, productid=?, catid=?, scatid=?, prodective_cell=? WHERE id=?");
+	      mysqli_stmt_bind_param($stmt, "ssisii", $pname, $pshort, $catid, $scatid, $prodective_cell, $pid);
+	      mysqli_stmt_execute($stmt);
+	      mysqli_stmt_close($stmt);
+
+	      echo "success";
 	   }
   }
-
 
 ?>
