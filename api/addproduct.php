@@ -34,9 +34,21 @@
 	  return;
 	}
 	
+	// Ensure target upload directory exists and is writable
+	$uploadDir = dirname(__DIR__) . "/imgproduct/";
+	if (!is_dir($uploadDir)) {
+		@mkdir($uploadDir, 0777, true);
+	}
+	if (is_dir($uploadDir) && !is_writable($uploadDir)) {
+		@chmod($uploadDir, 0777);
+	}
+
 	$cleanBaseName = preg_replace("/[^a-zA-Z0-9_-]/", "", $pname.$pshort);
+	if (empty($cleanBaseName)) {
+		$cleanBaseName = "prod_" . time();
+	}
 	$filename = $cleanBaseName . "_" . time() . "." . ($fileExt === 'jpeg' ? 'jpg' : $fileExt);
-	$destination = __DIR__ . "/../imgproduct/" . $filename;
+	$destination = $uploadDir . $filename;
 	
 	$prodective_cell = isset($prodective_cell) ? $prodective_cell : 0;
 	
@@ -44,9 +56,21 @@
 	if(mysqli_affected_rows($con)>0)
 	{  
 		if (move_uploaded_file($tmpname, $destination)) {
+			@chmod($destination, 0644);
 			echo "success";
 		} else {
-			echo "Image upload error";
+			$lastErr = error_get_last();
+			$details = "";
+			if (!is_dir($uploadDir)) {
+				$details = ": Directory $uploadDir does not exist";
+			} else if (!is_writable($uploadDir)) {
+				$details = ": Directory $uploadDir is not writable. Please execute: chmod 777 $uploadDir";
+			} else if (!is_uploaded_file($tmpname)) {
+				$details = ": Temporary uploaded file is missing or invalid";
+			} else if ($lastErr && isset($lastErr['message'])) {
+				$details = ": " . $lastErr['message'];
+			}
+			echo "Image upload error" . $details;
 		}
 	}
 	
@@ -143,17 +167,31 @@ ORDER BY  cat_order ,sub_cat_order ,skus.prodective_cell ASC
 	       return;
 	     }
 
+		  // Ensure target upload directory exists and is writable
+		  $uploadDir = dirname(__DIR__) . "/imgproduct/";
+		  if (!is_dir($uploadDir)) {
+			  @mkdir($uploadDir, 0777, true);
+		  }
+		  if (is_dir($uploadDir) && !is_writable($uploadDir)) {
+			  @chmod($uploadDir, 0777);
+		  }
+
 		  // Generate clean unique filename with extension and timestamp to bust browser cache
 		  $cleanBaseName = preg_replace("/[^a-zA-Z0-9_-]/", "", $pname . $pshort);
+		  if (empty($cleanBaseName)) {
+			  $cleanBaseName = "prod_" . (!empty($pid) ? $pid : time());
+		  }
 		  $filename = $cleanBaseName . "_" . time() . "." . ($fileExt === 'jpeg' ? 'jpg' : $fileExt);
-		  $destination = __DIR__ . "/../imgproduct/" . $filename;
+		  $destination = $uploadDir . $filename;
 
 		  // Move uploaded file first
 		  if (move_uploaded_file($tmpname, $destination)) {
+			  @chmod($destination, 0644);
+
 			  // Fetch old image to delete old file from disk
 			  $oldImgRes = mysqli_query($con, "SELECT image FROM skus WHERE id='$pid'");
 			  if($oldRow = mysqli_fetch_assoc($oldImgRes)) {
-				  $oldFile = __DIR__ . "/../imgproduct/" . $oldRow['image'];
+				  $oldFile = $uploadDir . $oldRow['image'];
 				  if(!empty($oldRow['image']) && file_exists($oldFile) && $oldFile != $destination) {
 					  @unlink($oldFile);
 				  }
@@ -168,7 +206,18 @@ ORDER BY  cat_order ,sub_cat_order ,skus.prodective_cell ASC
 
 			  echo "success";
 		  } else {
-			  echo "Image upload error";
+			  $lastErr = error_get_last();
+			  $details = "";
+			  if (!is_dir($uploadDir)) {
+				  $details = ": Directory $uploadDir does not exist";
+			  } else if (!is_writable($uploadDir)) {
+				  $details = ": Directory $uploadDir is not writable. Please execute: chmod 777 $uploadDir";
+			  } else if (!is_uploaded_file($tmpname)) {
+				  $details = ": Temporary uploaded file is missing or invalid";
+			  } else if ($lastErr && isset($lastErr['message'])) {
+				  $details = ": " . $lastErr['message'];
+			  }
+			  echo "Image upload error" . $details;
 		  }
 	   }
 	   else
