@@ -402,10 +402,10 @@ if(isset($_GET['orderproduct'])){
         $con->commit();
 
         echo json_encode([
-            'msg' => 'Success',
-            'order_id' => (string)$booking_id,
-            'is_edit_order' => $is_edit_order,
-            'action' => $is_edit_order ? 'updated' : 'created'
+            'msg' => 'Success'
+            // 'order_id' => (string)$booking_id,
+            // 'is_edit_order' => $is_edit_order,
+            // 'action' => $is_edit_order ? 'updated' : 'created'
         ]);
 
     } catch (Throwable $e) {
